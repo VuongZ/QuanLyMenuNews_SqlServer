@@ -13,12 +13,17 @@ public class NewsController : ControllerBase
     {
         _mediator=mediator;
     }
-    [HttpGet]
-    public async Task<IActionResult> GetAllNews()
+[HttpGet]
+public async Task<IActionResult> GetAllNews([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+{
+    var news = await _mediator.Send(new GetAllNewsRequest
     {
-        var news = await _mediator.Send(new GetAllNewsRequest());
-        return Ok(news);
-    }
+        Page = page,
+        PageSize = pageSize
+    });
+
+    return Ok(news);
+}
     [HttpGet("{id}")]
     public async Task<IActionResult> GetNewsById(int id)
     {

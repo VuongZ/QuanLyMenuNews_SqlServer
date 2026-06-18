@@ -14,12 +14,17 @@ public class MenuController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
+      [HttpGet]
+        public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+{
+    var result = await _mediator.Send(new GetAllMenuRequest
     {
-        var result = await _mediator.Send(new GetAllMenuRequest());
-        return Ok(result);
-    }
+        Page = page,
+        PageSize = pageSize
+    });
+
+    return Ok(result);
+}
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
