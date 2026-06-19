@@ -17,3 +17,4 @@ D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net8.0\refint\Infrastructu
 D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net8.0\Infrastructure.pdb
 D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net8.0\Infrastructure.genruntimeconfig.cache
 D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net8.0\ref\Infrastructure.dll
+D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net8.0\Infrastructure.sourcelink.json

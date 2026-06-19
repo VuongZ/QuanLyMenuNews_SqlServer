@@ -18,11 +18,8 @@ namespace Application.XuLyNews.UsesCases
 
         public async Task<IEnumerable<NewsResponseDto>> Handle(GetAllNewsRequest request, CancellationToken cancellationToken)
         {
-           var page = request.Page <= 0 ? 1 : request.Page;
-        var pageSize = request.PageSize <= 0 ? 10 : request.PageSize;
-        pageSize = pageSize > 50 ? 50 : pageSize;
-
-        var news = await _newsRepo.GetAllWithMenusAsync(page, pageSize);
+ 
+        var news = await _newsRepo.GetAllWithMenusAsync();
             return news.Select(n => new NewsResponseDto
             {
                 Id = n.Id,

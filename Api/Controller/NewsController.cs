@@ -14,13 +14,9 @@ public class NewsController : ControllerBase
         _mediator=mediator;
     }
 [HttpGet]
-public async Task<IActionResult> GetAllNews([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+public async Task<IActionResult> GetAllNews()
 {
-    var news = await _mediator.Send(new GetAllNewsRequest
-    {
-        Page = page,
-        PageSize = pageSize
-    });
+    var news = await _mediator.Send(new GetAllNewsRequest());
 
     return Ok(news);
 }

@@ -43,12 +43,10 @@ public class MenuRepository : Repository<Menu> , IMenuRepo
             .FirstOrDefaultAsync();
     }
 
-    public async Task<IEnumerable<Menu>> GetAllWithNewsAsync(int page, int pageSize)
+    public async Task<IEnumerable<Menu>> GetAllWithNewsAsync()
     {
         return await _context.Menus
             .Where(m => m.is_deleted == false)
-             .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .Select(m => new Menu
             {
                 Id         = m.Id,

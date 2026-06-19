@@ -9,11 +9,14 @@ public class AppDbContext : DbContext
 
         public DbSet<Menu> Menus { get; set; }
         public DbSet<News> News { get; set; }
+        public DbSet<MenuNews> MenuNews { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new MenuConFig());
             modelBuilder.ApplyConfiguration(new NewsConFig());
+                modelBuilder.ApplyConfiguration(new MenuNewsConfig());
+
         }
 
 }

@@ -20,7 +20,6 @@ namespace Infrastructure.Configuration
             .IsUnique();
             builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
             builder.Property(x => x.Slug).HasMaxLength(255).IsRequired();
-            builder.HasMany(m => m.News).WithMany(m=>m.Menu).UsingEntity(j=>j.ToTable("Menu_News"));
         }   
     }
 

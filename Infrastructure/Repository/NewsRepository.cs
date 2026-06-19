@@ -43,12 +43,10 @@ public class NewsRepository : Repository<News> , INewsRepo
         })
         .FirstOrDefaultAsync();
 }
-public async Task<IEnumerable<News>> GetAllWithMenusAsync(int page, int pageSize)
+public async Task<IEnumerable<News>> GetAllWithMenusAsync()
     {
         return await _context.News
             .Where(n => n.is_deleted == false)
-             .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .Select(n => new News
             {
                 Id = n.Id,

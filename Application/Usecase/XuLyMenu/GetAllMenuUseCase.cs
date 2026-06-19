@@ -19,10 +19,8 @@ namespace Application.XuLyMenu.UseCases
 
         public async Task<IEnumerable<MenuResponseDto?>> Handle(GetAllMenuRequest request, CancellationToken cancellationToken)
         {
-            var page = request.Page <= 0 ? 1 : request.Page;
-var pageSize = request.PageSize <= 0 ? 10 : request.PageSize;
-pageSize = pageSize > 50 ? 50 : pageSize;
-            var menus = await _menuRepo.GetAllWithNewsAsync(page, pageSize);
+           
+            var menus = await _menuRepo.GetAllWithNewsAsync();
             return menus.Select(m => new MenuResponseDto
             {
                 Id = m.Id,

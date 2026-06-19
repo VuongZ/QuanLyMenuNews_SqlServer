@@ -6,6 +6,6 @@ namespace Domain.repositories
     {
             Task<Menu?> GetBySlugAsync(string slug);
              Task<Menu?> GetByIdWithNewsAsync(int id);       
-        Task<IEnumerable<Menu>> GetAllWithNewsAsync(int page, int pageSize);
+        Task<IEnumerable<Menu>> GetAllWithNewsAsync();
     }
 }

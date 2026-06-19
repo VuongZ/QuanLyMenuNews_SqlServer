@@ -15,13 +15,9 @@ public class MenuController : ControllerBase
     }
 
       [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetAll()
 {
-    var result = await _mediator.Send(new GetAllMenuRequest
-    {
-        Page = page,
-        PageSize = pageSize
-    });
+    var result = await _mediator.Send(new GetAllMenuRequest());
 
     return Ok(result);
 }

@@ -14,6 +14,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IMenuRepo, MenuRepository>();
 builder.Services.AddScoped<INewsRepo, NewsRepository>();
+builder.Services.AddScoped<IMenuNewsRepo, MenuNewsRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSwaggerGen();
 builder.Services.AddMediatR(cfg =>
