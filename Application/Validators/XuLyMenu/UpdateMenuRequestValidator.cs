@@ -7,7 +7,7 @@ public class UpdateMenuRequestValidator : AbstractValidator<UpdateMenuRequest>
 {
     public UpdateMenuRequestValidator()
     {
-        RuleFor(x => x.id)
+        RuleFor(x => x.Id)
             .GreaterThan(0).WithMessage("Id menu không hợp lệ.");
 
         RuleFor(x => x.Name)

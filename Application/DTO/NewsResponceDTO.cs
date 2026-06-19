@@ -7,9 +7,17 @@ public class NewsResponseDto
 
     public string Slug { get; set; } = string.Empty;
 
-    public string Content { get; set; } = string.Empty;
+    public string? Content { get; set; }
 
-    public string Thumbnail { get; set; } = string.Empty;
+    public string? Thumbnail { get; set; }
 
-    public List<MenuResponseDto> Menus { get; set; } = new();
+    public string? Address { get; set; }
+
+    public int? WardId { get; set; }
+
+    public string? FullAddress { get; set; }
+
+    public WardInfoResponseDto? WardInfo { get; set; }
+
+    public List<MenuBasicResponseDto> Menus { get; set; } = new();
 }

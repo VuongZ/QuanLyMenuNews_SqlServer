@@ -16,7 +16,7 @@ namespace Application.Usecase.XuLyMenuNews
 
         public async Task<IEnumerable<MenuNewsResponseDto>> Handle(SearchMenuNewsRequest request, CancellationToken cancellationToken)
         {
-            var menuNews = await _menuNewsRepo.GetById(request.MenuId, request.NewsId);
+            var menuNews = await _menuNewsRepo.SearchAsync(request.MenuId, request.NewsId);
             return menuNews.Select(MenuNewsMapper.ToDto);
         }
     }

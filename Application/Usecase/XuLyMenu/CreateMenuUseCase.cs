@@ -3,6 +3,7 @@ using Domain.repositories;
 using Application.Requests.XuLyMenu;
 using MediatR;
 using FluentValidation;
+using FluentValidation.Results;
 
 namespace Application.XuLyMenu.UseCases
 {
@@ -26,10 +27,16 @@ namespace Application.XuLyMenu.UseCases
             try
             {
                var existing = await _menuRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
-            if (existing != null)
+           if (existing != null)
             {
-                   throw new ValidationException("Menu đã tồn tại.");
-            }
+    throw new ValidationException(new[]
+    {
+        new ValidationFailure(
+            nameof(request.Slug),
+            $"Slug menu '{request.Slug}' đã tồn tại."
+        )
+    });
+}
 
             var menu = new Menu
             {

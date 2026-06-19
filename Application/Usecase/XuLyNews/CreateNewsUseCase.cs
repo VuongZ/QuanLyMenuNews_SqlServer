@@ -4,6 +4,7 @@ using Application.Requests.XuLyMenu;
 using MediatR;
 using Application.Requests.XuLyNews;
 using FluentValidation;
+using FluentValidation.Results;
 
 namespace Application.XuLyNews.UseCases
 {
@@ -47,9 +48,13 @@ namespace Application.XuLyNews.UseCases
                     {
                         if(!string.Equals(menu.Name?.Trim(),item.Name.Trim(),StringComparison.OrdinalIgnoreCase))
                         {
-                            throw new ValidationException(
-                                $"Slug Menu '{item.Name}' đã tồn tại với Tên khác."
-                            );
+                           throw new ValidationException(new[]
+             {
+        new ValidationFailure(
+            nameof(item.Slug),
+            $"Slug news '{item.Slug}' đã tồn tại với tiêu đề khác."
+        )
+                });
                         }
                          menu.News.Add(news);
                         continue;

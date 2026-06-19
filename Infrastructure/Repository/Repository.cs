@@ -48,4 +48,46 @@ public abstract class Repository<T> : IRepository<T> where T : BaseId
 
        
     }
+    public async Task<bool> ExistsAsync(int id)
+{
+      var entity = await _dbSet
+            .FirstOrDefaultAsync(x => x.Id == id);
+
+        if (entity == null)
+        {
+            return false;
+        }
+
+        _dbSet.Remove(entity);
+
+        return true;
+}
+
+    public Task SoftDelete(int id)
+    {
+        return _dbSet.AnyAsync(x =>
+        x.Id == id &&
+        x.is_deleted == false);
+    }
+    public async Task<int> SoftDeleteManyAsync(IEnumerable<int> ids)
+{
+    var distinctIds = ids.Distinct().ToList();
+
+    var entities = await _dbSet
+        .Where(x =>
+            distinctIds.Contains(x.Id) &&
+            !x.is_deleted)
+        .ToListAsync();
+
+    var now = DateTime.UtcNow;
+
+    foreach (var entity in entities)
+    {
+        entity.is_deleted = true;
+        entity.deleted_at = now;
+        entity.updated_at = now;
+    }
+
+    return entities.Count;
+}
 }

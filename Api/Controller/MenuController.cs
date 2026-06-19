@@ -38,13 +38,24 @@ public class MenuController : ControllerBase
         return Ok(result);
     }
      [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, UpdateMenuRequest request)
+public async Task<IActionResult> Update(
+    int id,
+    UpdateMenuRequest request)
+{
+    request.Id = id;
+
+    var result = await _mediator.Send(request);
+
+    if (!result)
     {
-        request.id = id;
-        var result = await _mediator.Send(request);
-        if (!result) return NotFound();
-        return Ok(result);
+        return NotFound();
     }
+
+    return Ok(new
+    {
+        message = "Cập nhật Menu và danh sách News thành công."
+    });
+}
       [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -52,5 +63,16 @@ public class MenuController : ControllerBase
         if (!result) return NotFound();
         return Ok(result);
     }
+[HttpPost("delete-many")]
+public async Task<IActionResult> DeleteMany(
+    [FromBody] DeleteManyMenuRequest request)
+{
+    var deletedCount = await _mediator.Send(request);
 
+    return Ok(new
+    {
+        message = "Xóa nhiều Menu thành công.",
+        deletedCount
+    });
+}
 }

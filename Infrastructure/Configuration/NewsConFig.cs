@@ -22,6 +22,19 @@ namespace Infrastructure.Configuration
             builder.Property(x => x.Slug).HasMaxLength(255).IsRequired();
             builder.Property(x => x.Content).IsRequired();
             builder.Property(x => x.thumbnail).HasMaxLength(255);
+            builder.Property(x => x.Address)
+            .HasColumnName("address")
+            .HasMaxLength(255);
+
+            builder.Property(x => x.WardId)
+                .HasColumnName("ward_id");
+
+            builder.HasOne(x => x.Ward)
+                .WithMany(x => x.News)
+                .HasForeignKey(x => x.WardId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            builder.HasIndex(x => x.WardId);
 
         }   
     }

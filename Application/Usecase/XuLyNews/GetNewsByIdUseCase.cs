@@ -25,7 +25,67 @@ namespace Application.Usecase.XuLyNews
                 Slug = news.Slug ?? string.Empty,
                 Content = news.Content ?? string.Empty,
                 Thumbnail = news.thumbnail ?? string.Empty,
-                Menus = news.Menu.Select(m => new MenuResponseDto
+                 Address = news.Address,
+                WardId = news.WardId,
+
+                FullAddress = news.Ward == null
+                    ? news.Address
+                    : string.Join(
+                        ", ",
+                        new[]
+                        {
+                            news.Address,
+                            news.Ward.FullName,
+                            "Việt Nam"
+                        }
+                        .Where(x =>
+                            !string.IsNullOrWhiteSpace(x))
+                    ),
+
+                WardInfo = news.Ward == null
+                    ? null
+                    : new WardInfoResponseDto
+                    {
+                        WardId = news.Ward.WardId,
+                        WardPid = news.Ward.WardPid,
+                        Name = news.Ward.Name,
+                        NameEn = news.Ward.NameEn,
+                        FullName = news.Ward.FullName,
+                        FullNameEn = news.Ward.FullNameEn,
+                        KeyLocalization =
+                            news.Ward.KeyLocalization,
+
+                        WardParent =
+                            new WardParentResponseDto
+                            {
+                                WardId = news.Ward.WardPid,
+
+                                Name = news.Ward.FullName
+                                    .Contains(",")
+                                    ? news.Ward.FullName
+                                        .Split(',', 2)[1]
+                                        .Trim()
+                                    : string.Empty,
+
+                                NameEn =
+                                    !string.IsNullOrWhiteSpace(
+                                        news.Ward.FullNameEn)
+                                    && news.Ward.FullNameEn
+                                        .Contains(",")
+                                        ? news.Ward.FullNameEn
+                                            .Split(',', 2)[1]
+                                            .Trim()
+                                        : null,
+
+                                FullName = news.Ward.FullName
+                                    .Contains(",")
+                                    ? news.Ward.FullName
+                                        .Split(',', 2)[1]
+                                        .Trim()
+                                    : string.Empty
+                            }
+                    },
+                Menus = news.Menu.Select(m => new MenuBasicResponseDto
                 {
                     Id = m.Id,
                     Name = m.Name ?? string.Empty,

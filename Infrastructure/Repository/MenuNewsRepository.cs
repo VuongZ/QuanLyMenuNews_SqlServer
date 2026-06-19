@@ -20,7 +20,7 @@ namespace Infrastructure.Repository
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<MenuNews>> GetById(int? menuId, int? newsId)
+        public async Task<IEnumerable<MenuNews>> SearchAsync(int? menuId, int? newsId)
         {
             var query = Query();
 
@@ -64,6 +64,12 @@ namespace Infrastructure.Repository
                 _context.MenuNews.Remove(menuNews);
             }
         }
+        public Task<bool> ExistsAsync(int menuId, int newsId)
+{
+    return _context.MenuNews.AnyAsync(x =>
+        x.MenuId == menuId &&
+        x.NewsId == newsId);
+}
 
         private IQueryable<MenuNews> Query()
         {

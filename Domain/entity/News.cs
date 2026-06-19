@@ -7,6 +7,8 @@ namespace Domain.entity
         public string ? Content { get; set; }
         public string ? thumbnail { get; set; }
         public ICollection<Menu> Menu { get; set; } = new List<Menu>();
-
+        public string? Address { get; set; }
+            public int? WardId { get; set; }
+        public WebsiteLocalizationWard? Ward { get; set; }
     }
 }

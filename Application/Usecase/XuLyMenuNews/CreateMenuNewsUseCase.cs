@@ -2,6 +2,7 @@ using Application.Requests.XuLyMenuNews;
 using Domain.entity;
 using Domain.repositories;
 using FluentValidation;
+using FluentValidation.Results;
 using MediatR;
 
 namespace Application.Usecase.XuLyMenuNews
@@ -25,34 +26,51 @@ namespace Application.Usecase.XuLyMenuNews
             _uow = uow;
         }
 
-        public async Task<bool> Handle(CreateMenuNewsRequest request, CancellationToken cancellationToken)
+     public async Task<bool> Handle(CreateMenuNewsRequest request, CancellationToken cancellationToken){
+    if (!await _menuRepo.ExistsAsync(request.MenuId))
+    {
+        throw new ValidationException(new[]
         {
-            var menu = await _menuRepo.GetByIdAsync(request.MenuId);
-            if (menu == null)
-            {
-                throw new ValidationException("Menu không tồn tại.");
-            }
+            new ValidationFailure(
+                nameof(request.MenuId),
+                $"Không tìm thấy Menu có Id = {request.MenuId}."
+            )
+        });
+    }
 
-            var news = await _newsRepo.GetByIdAsync(request.NewsId);
-            if (news == null)
-            {
-                throw new ValidationException("News không tồn tại.");
-            }
+    if (!await _newsRepo.ExistsAsync(request.NewsId))
+    {
+        throw new ValidationException(new[]
+        {
+            new ValidationFailure(
+                nameof(request.NewsId),
+                $"Không tìm thấy News có Id = {request.NewsId}."
+            )
+        });
+    }
 
-            var existing = await _menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
-            if (existing != null)
-            {
-                throw new ValidationException("Menu_News đã tồn tại.");
-            }
+    if (await _menuNewsRepo.ExistsAsync(
+        request.MenuId,
+        request.NewsId))
+    {
+        throw new ValidationException(new[]
+        {
+            new ValidationFailure(
+                "MenuNews",
+                "Quan hệ giữa Menu và News đã tồn tại."
+            )
+        });
+    }
 
-            await _menuNewsRepo.AddAsync(new MenuNews
-            {
-                MenuId = request.MenuId,
-                NewsId = request.NewsId
-            });
-            await _uow.SaveChangesAsync(cancellationToken);
+    await _menuNewsRepo.AddAsync(new MenuNews
+    {
+        MenuId = request.MenuId,
+        NewsId = request.NewsId
+    });
 
-            return true;
-        }
+    await _uow.SaveChangesAsync(cancellationToken);
+
+    return true;
+}
     }
 }

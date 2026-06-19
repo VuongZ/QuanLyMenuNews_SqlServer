@@ -33,10 +33,25 @@ public class MenuRepository : Repository<Menu> , IMenuRepo
                         Slug      = n.Slug,
                         Content   = n.Content,
                         thumbnail = n.thumbnail,
-                           created_at = n.created_at,
-                    updated_at = n.updated_at,
-                    deleted_at = n.deleted_at,
-                    is_deleted = n.is_deleted
+                        Address=n.Address,
+                        WardId=n.WardId,
+                        Ward = n.Ward == null
+                        ? null
+                        : new WebsiteLocalizationWard
+                        {
+                            WardId = n.Ward.WardId,
+                            WardPid = n.Ward.WardPid,
+                            Name = n.Ward.Name,
+                            NameEn = n.Ward.NameEn,
+                            FullName = n.Ward.FullName,
+                            FullNameEn = n.Ward.FullNameEn,
+                            KeyLocalization = n.Ward.KeyLocalization,
+                            IsActived = n.Ward.IsActived
+                        },
+                        created_at = n.created_at,
+                        updated_at = n.updated_at,
+                        deleted_at = n.deleted_at,
+                        is_deleted = n.is_deleted
                     })
                     .ToList()
             })
@@ -55,7 +70,7 @@ public class MenuRepository : Repository<Menu> , IMenuRepo
                 created_at = m.created_at,
                 updated_at = m.updated_at,
                 is_deleted = m.is_deleted,
-                News = m.News
+               News = m.News
                     .Where(n => n.is_deleted == false)
                     .Select(n => new News
                     {
@@ -63,11 +78,26 @@ public class MenuRepository : Repository<Menu> , IMenuRepo
                         Title     = n.Title,
                         Slug      = n.Slug,
                         Content   = n.Content,
-                        thumbnail = n.thumbnail,  
-                         created_at = n.created_at,
-                    updated_at = n.updated_at,
-                    deleted_at = n.deleted_at,
-                    is_deleted = n.is_deleted
+                        thumbnail = n.thumbnail,
+                        Address=n.Address,
+                        WardId=n.WardId,
+                        Ward = n.Ward == null
+                        ? null
+                        : new WebsiteLocalizationWard
+                        {
+                            WardId = n.Ward.WardId,
+                            WardPid = n.Ward.WardPid,
+                            Name = n.Ward.Name,
+                            NameEn = n.Ward.NameEn,
+                            FullName = n.Ward.FullName,
+                            FullNameEn = n.Ward.FullNameEn,
+                            KeyLocalization = n.Ward.KeyLocalization,
+                            IsActived = n.Ward.IsActived
+                        },
+                        created_at = n.created_at,
+                        updated_at = n.updated_at,
+                        deleted_at = n.deleted_at,
+                        is_deleted = n.is_deleted
                     })
                     .ToList()
             })

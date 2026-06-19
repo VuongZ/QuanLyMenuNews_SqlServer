@@ -3,6 +3,7 @@ using Application.XuLyMenu.UseCases;
 using Domain.repositories;
 using FluentValidation;
 using Infrastructure.Data;
+using Infrastructure.Repositories;
 using Infrastructure.Repository;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -24,13 +25,14 @@ builder.Services.AddControllers()
         o.JsonSerializerOptions.ReferenceHandler 
             = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 builder.Services.AddValidatorsFromAssembly(typeof(GetAllMenuUseCase).Assembly);
-
+builder.Services.AddScoped<
+    IWebsiteLocalizationWardRepo,
+    WebsiteLocalizationWardRepository>();
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // await db.Database.MigrateAsync();
 }
 
 if (app.Environment.IsDevelopment())

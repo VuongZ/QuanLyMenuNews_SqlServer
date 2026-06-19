@@ -30,6 +30,22 @@ public class NewsRepository : Repository<News> , INewsRepo
                     updated_at = n.updated_at,
                     deleted_at = n.deleted_at,
                     is_deleted = n.is_deleted,
+                    Address = n.Address,
+                WardId = n.WardId,
+
+            Ward = n.Ward == null
+                ? null
+                : new WebsiteLocalizationWard
+                {
+                    WardId = n.Ward.WardId,
+                    WardPid = n.Ward.WardPid,
+                    Name = n.Ward.Name,
+                    NameEn = n.Ward.NameEn,
+                    FullName = n.Ward.FullName,
+                    FullNameEn = n.Ward.FullNameEn,
+                    KeyLocalization = n.Ward.KeyLocalization,
+                    IsActived = n.Ward.IsActived
+                },
             Menu = n.Menu.Where(m => m.is_deleted == false)
                 .Select(m => new Menu
                 {
@@ -58,6 +74,22 @@ public async Task<IEnumerable<News>> GetAllWithMenusAsync()
                     updated_at = n.updated_at,
                     deleted_at = n.deleted_at,
                     is_deleted = n.is_deleted,
+                    Address = n.Address,
+                WardId = n.WardId,
+
+            Ward = n.Ward == null
+                ? null
+                : new WebsiteLocalizationWard
+                {
+                    WardId = n.Ward.WardId,
+                    WardPid = n.Ward.WardPid,
+                    Name = n.Ward.Name,
+                    NameEn = n.Ward.NameEn,
+                    FullName = n.Ward.FullName,
+                    FullNameEn = n.Ward.FullNameEn,
+                    KeyLocalization = n.Ward.KeyLocalization,
+                    IsActived = n.Ward.IsActived
+                },
                 Menu = n.Menu.Where(m => m.is_deleted == false)
                 .Select(m => new Menu
                 {
