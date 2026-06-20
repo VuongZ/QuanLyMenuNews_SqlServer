@@ -7,5 +7,5 @@ public class MenuResponseDto
     public string Name { get; set; } = string.Empty;
 
     public string Slug { get; set; } = string.Empty;
-    public List<NewsResponseDto> News { get; set; } = new();
+    public IEnumerable<NewsResponseDto> News { get; set; } =  Enumerable.Empty<NewsResponseDto>();
 }

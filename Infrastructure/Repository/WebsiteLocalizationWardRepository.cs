@@ -16,8 +16,7 @@ public class WebsiteLocalizationWardRepository
         _context = context;
     }
 
-    public async Task<WebsiteLocalizationWard?>
-        GetByIdAsync(int wardId)
+    public async Task<WebsiteLocalizationWard?>GetByIdAsync(int wardId)
     {
         return await _context.WebsiteLocalizationWards
             .FirstOrDefaultAsync(x =>
@@ -25,8 +24,7 @@ public class WebsiteLocalizationWardRepository
                 x.IsActived);
     }
 
-    public async Task<IEnumerable<WebsiteLocalizationWard>>
-        GetProvincesAsync()
+    public async Task<IEnumerable<WebsiteLocalizationWard>>GetProvincesAsync()
     {
         return await _context.WebsiteLocalizationWards
             .Where(x =>
@@ -46,8 +44,7 @@ public class WebsiteLocalizationWardRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<WebsiteLocalizationWard>>
-        GetWardsByProvinceIdAsync(int provinceId)
+    public async Task<IEnumerable<WebsiteLocalizationWard>> GetWardsByProvinceIdAsync(int provinceId)
     {
         return await _context.WebsiteLocalizationWards
             .Where(x =>
@@ -66,4 +63,31 @@ public class WebsiteLocalizationWardRepository
             })
             .ToListAsync();
     }
+        public async Task<WebsiteLocalizationWard?>  GetProvinceByNameAsync(string provinceName)
+            {
+                var normalizedName = provinceName.Trim().ToLower();
+                return await _context.WebsiteLocalizationWards
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.WardPid == 0 &&
+                        x.IsActived &&
+                        (
+                            x.Name.ToLower() == normalizedName ||
+                            x.FullName.ToLower() == normalizedName
+                        ));
+            }
+         public async Task<WebsiteLocalizationWard?> GetWardByNameAndProvinceAsync( string wardName,int provinceId)
+            {
+                var normalizedName = wardName.Trim().ToLower();
+
+                return await _context.WebsiteLocalizationWards
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.WardPid == provinceId &&
+                        x.IsActived &&
+                        (
+                            x.Name.ToLower() == normalizedName ||
+                            x.FullName.ToLower() == normalizedName
+                        ));
+            }
 }

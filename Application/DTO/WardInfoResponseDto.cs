@@ -13,7 +13,7 @@ public class WardInfoResponseDto
 
     public string? FullNameEn { get; set; }
 
-    public string KeyLocalization { get; set; } = string.Empty;
+    public string Country { get; set; } = string.Empty;
 
     public WardParentResponseDto? WardParent { get; set; }
 }

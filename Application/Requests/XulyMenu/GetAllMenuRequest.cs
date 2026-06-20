@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Application.Requests.XuLyMenu
 {
-    public class GetAllMenuRequest : IRequest<IEnumerable< MenuResponseDto>>
+    public class GetAllMenuRequest : IRequest<IAsyncEnumerable< MenuResponseDto>>
     {
           
     }

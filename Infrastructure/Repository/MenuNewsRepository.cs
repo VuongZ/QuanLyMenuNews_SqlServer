@@ -106,5 +106,65 @@ namespace Infrastructure.Repository
                     }
                 });
         }
+        public async Task<List<int>> GetNewsIdsByMenuIdAsync(int menuId,CancellationToken cancellationToken = default)
+            {
+                return await _context.MenuNews
+                    .Where(x => x.MenuId == menuId)
+                    .Select(x => x.NewsId)
+                    .ToListAsync(cancellationToken);
+            }
+
+        public async Task RemoveByMenuAndNewsIdsAsync(int menuId,IEnumerable<int> newsIds,CancellationToken cancellationToken = default)
+                    {
+                        var ids = newsIds
+                            .Distinct()
+                            .ToList();
+
+                        if (ids.Count == 0)
+                        {
+                            return;
+                        }
+
+                        var relations = await _context.MenuNews
+                            .Where(x =>
+                                x.MenuId == menuId &&
+                                ids.Contains(x.NewsId))
+                            .ToListAsync(cancellationToken);
+
+                        _context.MenuNews.RemoveRange(relations);
+                    }
+                    public async Task<List<int>> GetMenuIdsByNewsIdAsync(
+                        int newsId,
+                        CancellationToken cancellationToken = default)
+                    {
+                        return await _context.MenuNews
+                            .Where(x => x.NewsId == newsId)
+                            .Select(x => x.MenuId)
+                            .ToListAsync(cancellationToken);
+                    }
+                    public async Task RemoveByNewsAndMenuIdsAsync(
+                        int newsId,
+                        IEnumerable<int> menuIds,
+                        CancellationToken cancellationToken = default)
+                    {
+                        var ids = menuIds
+                            .Distinct()
+                            .ToList();
+
+                        if (ids.Count == 0)
+                        {
+                            return;
+                        }
+
+                        var relations = await _context.MenuNews
+                            .Where(x =>
+                                x.NewsId == newsId &&
+                                ids.Contains(x.MenuId))
+                            .ToListAsync(cancellationToken);
+
+                        _context.MenuNews.RemoveRange(relations);
+                    }
     }
+    
+    
 }

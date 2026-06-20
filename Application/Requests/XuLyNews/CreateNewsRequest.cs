@@ -9,6 +9,11 @@ public class CreateNewsRequest : IRequest<bool>
     public string Slug { get; set; } = null!;
     public string Content { get; set; } = null!;
     public string Thumbnail { get; set; } = null!;
+
+    public string? Address { get; set; }
+    
+    public string? WardName { get; set; }
+    public string? ProvinceName { get; set; }
     public List<MenuInputRequest> DanhSachMenus { get; set; } = new();
 }
  public class MenuInputRequest

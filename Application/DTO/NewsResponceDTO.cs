@@ -19,5 +19,5 @@ public class NewsResponseDto
 
     public WardInfoResponseDto? WardInfo { get; set; }
 
-    public List<MenuBasicResponseDto> Menus { get; set; } = new();
+    public IEnumerable<MenuBasicResponseDto> Menus { get; set; }  = Enumerable.Empty<MenuBasicResponseDto>();
 }

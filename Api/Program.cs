@@ -1,4 +1,6 @@
 using Application.Common;
+using Application.DTO;
+using Application.Interfaces;
 using Application.XuLyMenu.UseCases;
 using Domain.repositories;
 using FluentValidation;
@@ -16,6 +18,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IMenuRepo, MenuRepository>();
 builder.Services.AddScoped<INewsRepo, NewsRepository>();
 builder.Services.AddScoped<IMenuNewsRepo, MenuNewsRepository>();
+builder.Services.AddScoped<IMenuQueryRepository, MenuRepository>();
+builder.Services.AddScoped<INewsQueryRepository, NewsRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSwaggerGen();
 builder.Services.AddMediatR(cfg =>

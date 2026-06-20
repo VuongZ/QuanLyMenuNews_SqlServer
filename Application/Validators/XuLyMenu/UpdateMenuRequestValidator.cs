@@ -19,5 +19,23 @@ public class UpdateMenuRequestValidator : AbstractValidator<UpdateMenuRequest>
             .MaximumLength(255).WithMessage("Slug menu tối đa 255 ký tự.")
             .Matches("^[a-zA-Z0-9-_]+$")
             .WithMessage("Slug menu chỉ được chứa chữ, số, dấu gạch ngang hoặc gạch dưới.");
-    }
+        RuleFor(x => x.DanhSachNews)
+                .NotNull()
+                .WithMessage("Danh sách News không được null.");
+
+        RuleForEach(x => x.DanhSachNews)
+                .SetValidator(new UpdateMenuNewsItemRequestValidator());
+
+        RuleFor(x => x.DanhSachNews)
+                .Must(items =>
+                {
+                    var slugs = items
+                        .Select(x => x.Slug.Trim().ToLowerInvariant())
+                        .ToList();
+
+                    return slugs.Count == slugs.Distinct().Count();
+                })
+                .When(x => x.DanhSachNews != null)
+                .WithMessage("Danh sách News không được trùng slug.");      
+                }
 }
