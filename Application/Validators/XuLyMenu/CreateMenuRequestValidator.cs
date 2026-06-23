@@ -1,8 +1,7 @@
 using Application.Requests.XuLyMenu;
 using FluentValidation;
 
-namespace Application.Validators.XuLyMenu
-;
+namespace Application.Validators.XuLyMenu;
 
 public class CreateMenuRequestValidator : AbstractValidator<CreateMenuRequest>
 {
@@ -30,7 +29,6 @@ public class CreateMenuRequestValidator : AbstractValidator<CreateMenuRequest>
                 var slugs = list
                     .Select(x => x.Slug.Trim().ToLower())
                     .ToList();
-
                 return slugs.Count == slugs.Distinct().Count();
             })
             .WithMessage("Danh sách News không được trùng Slug.")

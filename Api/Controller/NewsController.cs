@@ -51,4 +51,16 @@ public async Task<IActionResult> GetAllNews()
         if (!result) return NotFound();
         return Ok(result);
     }
+    [HttpPost("delete-many")]
+    public async Task<IActionResult> DeleteManyNews(
+        [FromBody] DeleteManyNewsRequest request)
+    {
+        var deletedCount = await _mediator.Send(request);
+
+        return Ok(new
+        {
+            message = "Xóa nhiều News thành công.",
+            deletedCount
+        });
+    }
 }

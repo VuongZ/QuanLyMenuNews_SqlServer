@@ -21,7 +21,7 @@ namespace Application.Usecase.XuLyNews
                 return false;
 
             await _newsRepo.DeleteAsync(request.id);
-            await _uow.SaveChangesAsync();
+            await _uow.SaveChangesAsync(cancellationToken);
             return true;
         }
     }

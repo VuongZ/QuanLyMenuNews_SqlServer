@@ -16,208 +16,195 @@ public class UpdateMenuUseCase
     IWebsiteLocalizationWardRepo _wardRepo;
     private readonly IUnitOfWork _uow;
 
-    public UpdateMenuUseCase( IMenuRepo menuRepo,INewsRepo newsRepo,IUnitOfWork uow,IMenuNewsRepo menuNewsRepo,IWebsiteLocalizationWardRepo wardRepo)
+    public UpdateMenuUseCase(IMenuRepo menuRepo, INewsRepo newsRepo, IUnitOfWork uow, IMenuNewsRepo menuNewsRepo, IWebsiteLocalizationWardRepo wardRepo)
     {
         _menuRepo = menuRepo;
         _newsRepo = newsRepo;
         _uow = uow;
-        _menuNewsRepo=menuNewsRepo;
-        _wardRepo=wardRepo;
+        _menuNewsRepo = menuNewsRepo;
+        _wardRepo = wardRepo;
     }
 
-   public async Task<bool> Handle(UpdateMenuRequest request,CancellationToken cancellationToken)
-{
-    await _uow.BeginTransactionAsync(cancellationToken);
-    try
+    public async Task<bool> Handle(UpdateMenuRequest request, CancellationToken cancellationToken)
     {
-        var normalizedMenuSlug = request.Slug.Trim().ToLowerInvariant();
-
-        var duplicateMenu = await _menuRepo.GetBySlugAsync(normalizedMenuSlug);
-        if (duplicateMenu != null &&
-            duplicateMenu.Id != request.Id)
+        await _uow.BeginTransactionAsync(cancellationToken);
+        try
         {
-            throw new ValidationException(new[]
+            var normalizedMenuSlug = request.Slug.Trim().ToLowerInvariant();
+            var duplicateMenu = await _menuRepo.GetBySlugAsync(normalizedMenuSlug);
+            if (duplicateMenu != null &&
+                duplicateMenu.Id != request.Id)
             {
-                new ValidationFailure(
-                    nameof(request.Slug),
-                    $"Slug Menu '{request.Slug}' đã tồn tại."
-                )
-            });
-        }
-        var menu = await _menuRepo.GetByIdAsync(request.Id);
-        if (menu == null)
-        {
-            await _uow.RollbackAsync(cancellationToken);
-            return false;
-        }
-        menu.Name = request.Name.Trim();
-        menu.Slug = normalizedMenuSlug;
-        menu.updated_at = DateTime.UtcNow;
-        await _menuRepo.UpdateAsync(menu);
-        var requestedNewsIds = new List<int>();
-        foreach (var item in request.DanhSachNews)
-        {
-            var normalizedNewsSlug = item.Slug.Trim().ToLowerInvariant();
-            News news;
-            if (item.Id.HasValue)
-            {
-                news = await _newsRepo.GetByIdAsync(item.Id.Value);
-                if (news == null)
+                throw new ValidationException(new[]
                 {
-                    throw new ValidationException(new[]
-                    {
-                        new ValidationFailure(
-                            nameof(item.Id),
-                            $"Không tìm thấy News Id = {item.Id.Value}."
-                        )
-                    });
-                }
-                var duplicateNews = await _newsRepo.GetBySlugAsync(normalizedNewsSlug);
-                if (duplicateNews != null && duplicateNews.Id != news.Id)
-                {
-                    throw new ValidationException(new[]
-                    {
-                        new ValidationFailure(
-                            nameof(item.Slug),
-                            $"Slug News '{item.Slug}' đã tồn tại."
-                        )
-                    });
-                }
-                var wardId = await ResolveWardIdAsync(item.ProvinceName, item.WardName, item.Address);
-                news.Title = item.Title.Trim();
-                news.Slug = normalizedNewsSlug;
-                news.Content = item.Content;
-                news.thumbnail =string.IsNullOrWhiteSpace(item.Thumbnail)? null: item.Thumbnail.Trim();
-                news.Address =string.IsNullOrWhiteSpace(item.Address) ? null: item.Address.Trim();
-                news.WardId = wardId;
-                news.updated_at = DateTime.UtcNow;
-                await _newsRepo.UpdateAsync(news);
+                    new ValidationFailure(
+                        nameof(request.Slug),
+                        $"Slug Menu '{request.Slug}' đã tồn tại."
+                    )
+                });
             }
-            else
+            var menu = await _menuRepo.GetByIdAsync(request.Id);
+            if (menu == null)
             {
-                var existingNews = await _newsRepo.GetBySlugAsync(normalizedNewsSlug);
-                if (existingNews != null)
+                await _uow.RollbackAsync(cancellationToken);
+                return false;
+            }
+            menu.Name = request.Name.Trim();
+            menu.Slug = normalizedMenuSlug;
+            menu.updated_at = DateTime.UtcNow;
+            await _menuRepo.UpdateAsync(menu);
+
+            var requestedNewsIds = new List<int>();
+            foreach (var item in request.DanhSachNews)
+            {
+                var normalizedNewsSlug = item.Slug.Trim().ToLowerInvariant();
+                News news;
+
+                if (item.Id.HasValue)
                 {
-                    if (!string.Equals(
-                            existingNews.Title?.Trim(),
-                            item.Title.Trim(),
-                            StringComparison.OrdinalIgnoreCase))
+                    news = await _newsRepo.GetByIdAsync(item.Id.Value);
+                    if (news == null)
+                    {
+                        throw new ValidationException(new[]
+                        {
+                            new ValidationFailure(
+                                nameof(item.Id),
+                                $"Không tìm thấy News Id = {item.Id.Value}."
+                            )
+                        });
+                    }
+                    var duplicateNews = await _newsRepo.GetBySlugAsync(normalizedNewsSlug);
+                    if (duplicateNews != null && duplicateNews.Id != news.Id)
                     {
                         throw new ValidationException(new[]
                         {
                             new ValidationFailure(
                                 nameof(item.Slug),
-                                $"Slug News '{item.Slug}' đã tồn tại với tiêu đề khác."
+                                $"Slug News '{item.Slug}' đã tồn tại."
                             )
                         });
                     }
-                    news = existingNews;
+                    var wardId = await ResolveWardIdAsync(item.ProvinceId, item.WardId, item.Address);
+                    news.Title      = item.Title.Trim();
+                    news.Slug       = normalizedNewsSlug;
+                    news.Content    = item.Content;
+                    news.thumbnail  = string.IsNullOrWhiteSpace(item.Thumbnail) ? null : item.Thumbnail.Trim();
+                    news.Address    = string.IsNullOrWhiteSpace(item.Address)   ? null : item.Address.Trim();
+                    news.WardId     = wardId;
+                    news.updated_at = DateTime.UtcNow;
+                    await _newsRepo.UpdateAsync(news);
                 }
                 else
                 {
-                    var wardId = await ResolveWardIdAsync(item.ProvinceName,item.WardName,item.Address);
-                    news = new News
+                    var existingNews = await _newsRepo.GetBySlugAsync(normalizedNewsSlug);
+                    if (existingNews != null)
                     {
-                        Title = item.Title.Trim(),
-                        Slug = normalizedNewsSlug,
-                        Content = item.Content,
-                        thumbnail = string.IsNullOrWhiteSpace(item.Thumbnail)? null: item.Thumbnail.Trim(),
-                        Address =string.IsNullOrWhiteSpace(item.Address)? null: item.Address.Trim(),
-                        WardId = wardId,
-                        created_at = DateTime.UtcNow,
-                        updated_at = DateTime.UtcNow
-                    };
+                        if (!string.Equals(
+                                existingNews.Title?.Trim(),
+                                item.Title.Trim(),
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new ValidationException(new[]
+                            {
+                                new ValidationFailure(
+                                    nameof(item.Slug),
+                                    $"Slug News '{item.Slug}' đã tồn tại với tiêu đề khác."
+                                )
+                            });
+                        }
+                        news = existingNews;
+                    }
+                    else
+                    {
+                        var wardId = await ResolveWardIdAsync(item.ProvinceId, item.WardId, item.Address);
+                        news = new News
+                        {
+                            Title      = item.Title.Trim(),
+                            Slug       = normalizedNewsSlug,
+                            Content    = item.Content,
+                            thumbnail  = string.IsNullOrWhiteSpace(item.Thumbnail) ? null : item.Thumbnail.Trim(),
+                            Address    = string.IsNullOrWhiteSpace(item.Address)   ? null : item.Address.Trim(),
+                            WardId     = wardId,
+                            created_at = DateTime.UtcNow,
+                            updated_at = DateTime.UtcNow
+                        };
 
-                    await _newsRepo.AddAsync(news);
-                    await _uow.SaveChangesAsync(cancellationToken);
+                        await _newsRepo.AddAsync(news);
+                        await _uow.SaveChangesAsync(cancellationToken);
+                    }
+                }
+                if (!requestedNewsIds.Contains(news.Id))
+                {
+                    requestedNewsIds.Add(news.Id);
                 }
             }
-            if (!requestedNewsIds.Contains(news.Id))
+            var currentNewsIds  = await _menuNewsRepo.GetNewsIdsByMenuIdAsync(menu.Id, cancellationToken);
+            var newsIdsToRemove = currentNewsIds.Except(requestedNewsIds).ToList();
+            var newsIdsToAdd    = requestedNewsIds.Except(currentNewsIds).ToList();
+            await _menuNewsRepo.RemoveByMenuAndNewsIdsAsync(menu.Id, newsIdsToRemove, cancellationToken);
+            foreach (var newsId in newsIdsToAdd)
             {
-                requestedNewsIds.Add(news.Id);
+                await _menuNewsRepo.AddAsync(new MenuNews
+                {
+                    MenuId = menu.Id,
+                    NewsId = newsId
+                });
             }
+            await _uow.CommitAsync(cancellationToken);
+            return true;
         }
-        var currentNewsIds = await _menuNewsRepo.GetNewsIdsByMenuIdAsync( menu.Id,cancellationToken);
-        var newsIdsToRemove = currentNewsIds.Except(requestedNewsIds).ToList();
-        var newsIdsToAdd = requestedNewsIds.Except(currentNewsIds).ToList();
-        await _menuNewsRepo.RemoveByMenuAndNewsIdsAsync(
-            menu.Id,
-            newsIdsToRemove,
-            cancellationToken);
-        foreach (var newsId in newsIdsToAdd)
+        catch
         {
-            await _menuNewsRepo.AddAsync(new MenuNews
+            await _uow.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+    private async Task<int?> ResolveWardIdAsync(int? provinceId, int? wardId, string? address)
+    {
+        var hasProvince = provinceId.HasValue;
+        var hasWard     = wardId.HasValue;
+        var hasAddress  = !string.IsNullOrWhiteSpace(address);
+        if (!hasProvince && !hasWard && !hasAddress)
+            return null;
+        if (!hasProvince || !hasWard || !hasAddress)
+        {
+            throw new ValidationException(new[]
             {
-                MenuId = menu.Id,
-                NewsId = newsId
+                new ValidationFailure(
+                    "Address",
+                    "Phải nhập đầy đủ tỉnh/thành phố, phường/xã và địa chỉ.")
             });
         }
-        await _uow.CommitAsync(cancellationToken);
-        return true;
-    }
-    catch
-    {
-        await _uow.RollbackAsync(cancellationToken);
-        throw;
-    }
-}
-     private async Task<int?> ResolveWardIdAsync(string? provinceName,string? wardName,string? address)
-    {
-        var hasProvince =!string.IsNullOrWhiteSpace(provinceName);
-
-        var hasWard =!string.IsNullOrWhiteSpace(wardName);
-
-        var hasAddress =!string.IsNullOrWhiteSpace(address);
-
-
-        if (!hasProvince && !hasWard && !hasAddress)
+        var province = await _wardRepo.GetByIdAsync(provinceId!.Value);
+        if (province == null || province.WardPid != 0)
         {
-            return null;
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(provinceId),
+                    $"Không tìm thấy tỉnh/thành phố có Id = {provinceId}.")
+            });
         }
 
-        // Có nhập nhưng thiếu một phần
-        if (!hasProvince || !hasWard || !hasAddress)
-    {
-        throw new ValidationException(new[]
+        var ward = await _wardRepo.GetByIdAsync(wardId!.Value);
+        if (ward == null)
         {
-            new ValidationFailure(
-                "Address",
-                "Phải nhập đầy đủ tỉnh/thành phố, phường/xã và địa chỉ."
-            )
-        });
-    }
-
-    var province = await _wardRepo
-        .GetProvinceByNameAsync(provinceName!.Trim());
-
-    if (province == null)
-    {
-        throw new ValidationException(new[]
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(wardId),
+                    $"Không tìm thấy phường/xã có Id = {wardId}.")
+            });
+        }
+        if (ward.WardPid != provinceId!.Value)
         {
-            new ValidationFailure(
-                nameof(provinceName),
-                $"Không tìm thấy tỉnh/thành phố '{provinceName}'."
-            )
-        });
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(wardId),
+                    $"Phường/xã Id = {wardId} không thuộc tỉnh Id = {provinceId}.")
+            });
+        }
+        return ward.WardId;
     }
-
-    var ward = await _wardRepo
-        .GetWardByNameAndProvinceAsync(
-            wardName!.Trim(),
-            province.WardId);
-
-    if (ward == null)
-    {
-        throw new ValidationException(new[]
-        {
-            new ValidationFailure(
-                nameof(wardName),
-                $"Không tìm thấy phường/xã '{wardName}' thuộc '{province.FullName}'."
-            )
-        });
-    }
-
-    return ward.WardId;
-    }
-
 }

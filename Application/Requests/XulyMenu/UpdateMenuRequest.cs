@@ -24,9 +24,7 @@ public class UpdateMenuNewsItemRequest
     public string Content { get; set; } = null!;
 
     public string? Thumbnail { get; set; }
-    public string? ProvinceName { get; set; }
-
-    public string? WardName { get; set; }
-
+    public int? ProvinceId { get; set; }
+    public int? WardId { get; set; }
     public string? Address { get; set; }
 }

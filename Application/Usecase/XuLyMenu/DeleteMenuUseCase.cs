@@ -10,7 +10,7 @@ public class DeleteMenuUseCase : IRequestHandler<DeleteMenuRequest,bool>
         public DeleteMenuUseCase(IMenuRepo repo,IUnitOfWork uow)
         {
             _repo = repo;
-                _uow = uow;
+            _uow = uow;
         }
 
     public async Task<bool> Handle(DeleteMenuRequest request, CancellationToken cancellationToken)

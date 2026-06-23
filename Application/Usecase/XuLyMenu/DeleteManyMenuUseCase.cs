@@ -29,10 +29,7 @@ public class DeleteManyMenuUseCase
     try
     {
         var ids = request.Ids.Distinct().ToList();
-
-        var deletedCount =
-            await _menuRepo.SoftDeleteManyAsync(ids);
-
+        var deletedCount =await _menuRepo.SoftDeleteManyAsync(ids);
         if (deletedCount != ids.Count)
         {
             throw new ValidationException(new[]
@@ -43,9 +40,7 @@ public class DeleteManyMenuUseCase
                 )
             });
         }
-
         await _uow.CommitAsync(cancellationToken);
-
         return deletedCount;
     }
     catch

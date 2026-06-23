@@ -42,10 +42,7 @@ public abstract class Repository<T> : IRepository<T> where T : BaseId
         {
             return;
         }
-        entity.is_deleted=true;
-        entity.deleted_at=DateTime.Now;
-        _dbSet.Update(entity);
-
+        _dbSet.Remove(entity);
        
     }
     public async Task<bool> ExistsAsync(int id)
@@ -58,16 +55,20 @@ public abstract class Repository<T> : IRepository<T> where T : BaseId
             return false;
         }
 
-        _dbSet.Remove(entity);
-
         return true;
 }
 
-    public Task SoftDelete(int id)
+    public async Task SoftDelete(int id)
     {
-        return _dbSet.AnyAsync(x =>
-        x.Id == id &&
-        x.is_deleted == false);
+         var entity = await GetByIdAsync(id);
+        if(entity == null)
+        {
+            return;
+        }
+        entity.is_deleted=true;
+        entity.deleted_at=DateTime.Now;
+        _dbSet.Update(entity);
+
     }
     public async Task<int> SoftDeleteManyAsync(IEnumerable<int> ids)
 {

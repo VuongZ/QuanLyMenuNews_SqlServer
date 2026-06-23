@@ -63,7 +63,7 @@ public async Task<IActionResult> Update(
         if (!result) return NotFound();
         return Ok(result);
     }
-[HttpPost("delete-many")]
+[HttpDelete("delete-many")]
 public async Task<IActionResult> DeleteMany(
     [FromBody] DeleteManyMenuRequest request)
 {

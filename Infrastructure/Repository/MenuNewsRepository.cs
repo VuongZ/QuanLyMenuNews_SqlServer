@@ -142,26 +142,17 @@ namespace Infrastructure.Repository
                             .Select(x => x.MenuId)
                             .ToListAsync(cancellationToken);
                     }
-                    public async Task RemoveByNewsAndMenuIdsAsync(
-                        int newsId,
-                        IEnumerable<int> menuIds,
-                        CancellationToken cancellationToken = default)
+                    public async Task RemoveByNewsAndMenuIdsAsync(int newsId,IEnumerable<int> menuIds,CancellationToken cancellationToken = default)
                     {
                         var ids = menuIds
                             .Distinct()
                             .ToList();
-
                         if (ids.Count == 0)
                         {
                             return;
                         }
-
-                        var relations = await _context.MenuNews
-                            .Where(x =>
-                                x.NewsId == newsId &&
-                                ids.Contains(x.MenuId))
+                        var relations = await _context.MenuNews.Where(x =>x.NewsId == newsId &&ids.Contains(x.MenuId))
                             .ToListAsync(cancellationToken);
-
                         _context.MenuNews.RemoveRange(relations);
                     }
     }

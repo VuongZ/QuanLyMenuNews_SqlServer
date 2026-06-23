@@ -1,12 +1,11 @@
-using Application.DTO;
-using Application.Interfaces;
+
 using Domain.entity;
 using Domain.repositories;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Repository;
-public class MenuRepository : Repository<Menu> , IMenuRepo ,IMenuQueryRepository
+public class MenuRepository : Repository<Menu> , IMenuRepo
 {
     public MenuRepository(AppDbContext context) : base(context)
     {}
@@ -14,47 +13,46 @@ public class MenuRepository : Repository<Menu> , IMenuRepo ,IMenuQueryRepository
     {
         return await _dbSet.FirstOrDefaultAsync(x => x.Slug == slug && x.is_deleted == false);
     }
-     public async Task<MenuResponseDto?> GetByIdWithNewsAsync(int id)
+     public async Task<Menu?> GetByIdWithNewsAsync(int id)
     {
-        return await GetAllWithNewsQuery()
-            .FirstOrDefaultAsync(m => m.Id == id);
+        return await GetAllWithNewsQuery().FirstOrDefaultAsync(m => m.Id == id);
             
     }
 
-    public IAsyncEnumerable<MenuResponseDto> GetAllWithNewsAsync()
+    public IAsyncEnumerable<Menu> GetAllWithNewsAsync()
     {
         return  GetAllWithNewsQuery().AsAsyncEnumerable();
      
     }
-    private IQueryable<MenuResponseDto> GetAllWithNewsQuery()
+    private IQueryable<Menu> GetAllWithNewsQuery()
 {
     return _context.Menus
         .Where(m => !m.is_deleted)
-        .Select(m => new MenuResponseDto
+        .Select(m => new Menu
         {
             Id = m.Id,
             Name = m.Name ?? string.Empty,
             Slug = m.Slug ?? string.Empty,
-
+            created_at = m.created_at,
+            updated_at = m.updated_at,
+            is_deleted = m.is_deleted,
             News = m.News
                 .Where(n => !n.is_deleted)
-                .Select(n => new NewsResponseDto
+                .Select(n => new News
                 {
                     Id = n.Id,
                     Title = n.Title ?? string.Empty,
                     Slug = n.Slug   ?? string.Empty,
                     Content = n.Content,
-                    Thumbnail = n.thumbnail,
+                    thumbnail = n.thumbnail,
                     Address = n.Address,
                     WardId = n.WardId,
-
-                    FullAddress = n.Ward == null
-                        ? n.Address
-                        : n.Address + ", " + n.Ward.FullName,
-
-                    WardInfo = n.Ward == null
+                     created_at = n.created_at,
+                    updated_at = n.updated_at,
+                    is_deleted = n.is_deleted,
+                    Ward = n.Ward == null
                         ? null
-                        : new WardInfoResponseDto
+                        : new WebsiteLocalizationWard
                         {
                             WardId = n.Ward.WardId,
                             WardPid = n.Ward.WardPid,
@@ -62,33 +60,20 @@ public class MenuRepository : Repository<Menu> , IMenuRepo ,IMenuQueryRepository
                             NameEn = n.Ward.NameEn,
                             FullName = n.Ward.FullName,
                             FullNameEn = n.Ward.FullNameEn,
-                            Country = n.Ward.Localization!.Localization ?? string.Empty, 
-                            WardParent = new WardParentResponseDto
-                            {
-                                WardId = n.Ward.WardPid,
-
-                                Name = n.Ward.FullName != null &&
-                                    n.Ward.FullName.Contains(",")
-                                    ? n.Ward.FullName
-                                        .Substring(n.Ward.FullName.IndexOf(",") + 1)
-                                        .Trim()
-                                    : string.Empty,
-
-                                NameEn = n.Ward.FullNameEn != null &&
-                                        n.Ward.FullNameEn.Contains(",")
-                                    ? n.Ward.FullNameEn
-                                        .Substring(n.Ward.FullNameEn.IndexOf(",") + 1)
-                                        .Trim()
-                                    : null,
-                                    Country = n.Ward.Localization!.Localization ?? string.Empty,
-                            }
+                            KeyLocalization = n.Ward.KeyLocalization,
+                            IsActived = n.Ward.IsActived,
+                            Localization = n.Ward.Localization == null
+                                        ? null
+                                        : new WebsiteLocalization
+                                        {
+                                            KeyLocalization = n.Ward.KeyLocalization,
+                                            Localization =n.Ward.Localization.Localization,
+                                            IsActived = n.Ward.Localization.IsActived
+                                        }
                         }
-                })
+                }).ToList()
         });
 }
 
-    public Task<Menu?> GetByIdWithNewsForUpdateAsync(int id)
-    {
-        throw new NotImplementedException();
-    }
+
 }
