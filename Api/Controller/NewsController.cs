@@ -51,7 +51,7 @@ public async Task<IActionResult> GetAllNews()
         if (!result) return NotFound();
         return Ok(result);
     }
-    [HttpPost("delete-many")]
+    [HttpDelete("delete-many")]
     public async Task<IActionResult> DeleteManyNews(
         [FromBody] DeleteManyNewsRequest request)
     {

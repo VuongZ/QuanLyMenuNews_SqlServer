@@ -48,7 +48,7 @@ public abstract class Repository<T> : IRepository<T> where T : BaseId
     public async Task<bool> ExistsAsync(int id)
 {
       var entity = await _dbSet
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .FirstOrDefaultAsync(x => x.Id == id  && !x.is_deleted);
 
         if (entity == null)
         {
@@ -66,7 +66,7 @@ public abstract class Repository<T> : IRepository<T> where T : BaseId
             return;
         }
         entity.is_deleted=true;
-        entity.deleted_at=DateTime.Now;
+        entity.deleted_at=DateTime.UtcNow;
         _dbSet.Update(entity);
 
     }
