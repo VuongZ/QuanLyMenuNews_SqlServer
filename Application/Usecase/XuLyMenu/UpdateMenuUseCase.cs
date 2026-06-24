@@ -58,7 +58,7 @@ public class UpdateMenuUseCase
             foreach (var item in request.DanhSachNews)
             {
                 var normalizedNewsSlug = item.Slug.Trim().ToLowerInvariant();
-                News news;
+                News? news;
 
                 if (item.Id.HasValue)
                 {
