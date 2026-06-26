@@ -9,8 +9,8 @@ namespace Application.Requests.XuLyNews;
 public class UpdateNewsUseCase
     : IRequestHandler<UpdateNewsRequest, bool>
 {
-    private readonly INewsRepo _newsRepo;
-    private readonly IMenuRepo _menuRepo;
+    private readonly INewsRepo newsRepo;
+    private readonly IMenuRepo menuRepo;
     private readonly IMenuNewsRepo _menuNewsRepo;
     private readonly IWebsiteLocalizationWardRepo _wardRepo;
     private readonly IUnitOfWork _uow;
@@ -22,8 +22,8 @@ public class UpdateNewsUseCase
         IWebsiteLocalizationWardRepo wardRepo,
         IUnitOfWork uow)
     {
-        _newsRepo     = newsRepo;
-        _menuRepo     = menuRepo;
+        newsRepo     = newsRepo;
+        menuRepo     = menuRepo;
         _menuNewsRepo = menuNewsRepo;
         _wardRepo     = wardRepo;
         _uow          = uow;
@@ -36,7 +36,7 @@ public class UpdateNewsUseCase
         {
             var normalizedNewsSlug = request.slug.Trim().ToLowerInvariant();
 
-            var duplicateNews = await _newsRepo.GetBySlugAsync(normalizedNewsSlug);
+            var duplicateNews = await newsRepo.GetBySlugAsync(normalizedNewsSlug);
             if (duplicateNews != null && duplicateNews.Id != request.id)
             {
                 throw new ValidationException(new[]
@@ -48,7 +48,7 @@ public class UpdateNewsUseCase
                 });
             }
 
-            var news = await _newsRepo.GetByIdAsync(request.id);
+            var news = await newsRepo.GetByIdAsync(request.id);
             if (news == null)
             {
                 await _uow.RollbackAsync(cancellationToken);
@@ -64,16 +64,15 @@ public class UpdateNewsUseCase
             news.Title     = request.title?.Trim();
             news.Slug      = normalizedNewsSlug;
             news.Content   = request.content;
-            news.thumbnail = string.IsNullOrWhiteSpace(request.thumbnail)
+            news.Thumbnail = string.IsNullOrWhiteSpace(request.Thumbnail)
                 ? null
-                : request.thumbnail.Trim();
+                : request.Thumbnail.Trim();
             news.Address = string.IsNullOrWhiteSpace(request.Address)
                 ? null
                 : request.Address.Trim();
             news.WardId     = wardId;
-            news.updated_at = DateTime.UtcNow;
-            await _newsRepo.UpdateAsync(news);
-
+            news.UpdatedAt = DateTime.UtcNow;
+            await newsRepo.UpdateAsync(news);
             var requestedMenuIds = new List<int>();
             foreach (var item in request.DanhSachMenus)
             {
@@ -82,7 +81,7 @@ public class UpdateNewsUseCase
 
                 if (item.Id.HasValue)
                 {
-                    menu = await _menuRepo.GetByIdAsync(item.Id.Value);
+                    menu = await menuRepo.GetByIdAsync(item.Id.Value);
                     if (menu == null)
                     {
                         throw new ValidationException(new[]
@@ -94,7 +93,7 @@ public class UpdateNewsUseCase
                         });
                     }
 
-                    var duplicateMenu = await _menuRepo.GetBySlugAsync(normalizedMenuSlug);
+                    var duplicateMenu = await menuRepo.GetBySlugAsync(normalizedMenuSlug);
                     if (duplicateMenu != null && duplicateMenu.Id != menu.Id)
                     {
                         throw new ValidationException(new[]
@@ -108,12 +107,12 @@ public class UpdateNewsUseCase
 
                     menu.Name       = item.Name.Trim();
                     menu.Slug       = normalizedMenuSlug;
-                    menu.updated_at = DateTime.UtcNow;
-                    await _menuRepo.UpdateAsync(menu);
+                    menu.UpdatedAt = DateTime.UtcNow;
+                    await menuRepo.UpdateAsync(menu);
                 }
                 else
                 {
-                    var existingMenu = await _menuRepo.GetBySlugAsync(normalizedMenuSlug);
+                    var existingMenu = await menuRepo.GetBySlugAsync(normalizedMenuSlug);
                     if (existingMenu != null)
                     {
                         if (!string.Equals(
@@ -137,10 +136,10 @@ public class UpdateNewsUseCase
                         {
                             Name       = item.Name.Trim(),
                             Slug       = normalizedMenuSlug,
-                            created_at = DateTime.UtcNow,
-                            updated_at = DateTime.UtcNow
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
                         };
-                        await _menuRepo.AddAsync(menu);
+                        await menuRepo.AddAsync(menu);
                         await _uow.SaveChangesAsync(cancellationToken);
                     }
                 }

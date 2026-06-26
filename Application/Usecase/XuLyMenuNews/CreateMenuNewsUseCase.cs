@@ -10,8 +10,8 @@ namespace Application.Usecase.XuLyMenuNews
     public class CreateMenuNewsUseCase : IRequestHandler<CreateMenuNewsRequest, bool>
     {
         private readonly IMenuNewsRepo _menuNewsRepo;
-        private readonly IMenuRepo _menuRepo;
-        private readonly INewsRepo _newsRepo;
+        private readonly IMenuRepo menuRepo;
+        private readonly INewsRepo newsRepo;
         private readonly IUnitOfWork _uow;
 
         public CreateMenuNewsUseCase(
@@ -21,13 +21,13 @@ namespace Application.Usecase.XuLyMenuNews
             IUnitOfWork uow)
         {
             _menuNewsRepo = menuNewsRepo;
-            _menuRepo = menuRepo;
-            _newsRepo = newsRepo;
+            menuRepo = menuRepo;
+            newsRepo = newsRepo;
             _uow = uow;
         }
 
      public async Task<bool> Handle(CreateMenuNewsRequest request, CancellationToken cancellationToken){
-    if (!await _menuRepo.ExistsAsync(request.MenuId))
+    if (!await menuRepo.ExistsAsync(request.MenuId))
     {
         throw new ValidationException(new[]
         {
@@ -38,7 +38,7 @@ namespace Application.Usecase.XuLyMenuNews
         });
     }
 
-    if (!await _newsRepo.ExistsAsync(request.NewsId))
+    if (!await newsRepo.ExistsAsync(request.NewsId))
     {
         throw new ValidationException(new[]
         {

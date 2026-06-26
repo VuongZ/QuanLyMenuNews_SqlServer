@@ -9,8 +9,8 @@ namespace Application.Usecase.XuLyMenuNews
     public class UpdateMenuNewsUseCase : IRequestHandler<UpdateMenuNewsRequest, bool>
     {
         private readonly IMenuNewsRepo _menuNewsRepo;
-        private readonly IMenuRepo _menuRepo;
-        private readonly INewsRepo _newsRepo;
+        private readonly IMenuRepo menuRepo;
+        private readonly INewsRepo newsRepo;
         private readonly IUnitOfWork _uow;
 
         public UpdateMenuNewsUseCase(
@@ -20,8 +20,8 @@ namespace Application.Usecase.XuLyMenuNews
             IUnitOfWork uow)
         {
             _menuNewsRepo = menuNewsRepo;
-            _menuRepo = menuRepo;
-            _newsRepo = newsRepo;
+            menuRepo = menuRepo;
+            newsRepo = newsRepo;
             _uow = uow;
         }
 
@@ -33,13 +33,13 @@ namespace Application.Usecase.XuLyMenuNews
                 return false;
             }
 
-            var menu = await _menuRepo.GetByIdAsync(request.MenuId);
+            var menu = await menuRepo.GetByIdAsync(request.MenuId);
             if (menu == null)
             {
                 throw new ValidationException("Menu không tồn tại.");
             }
 
-            var news = await _newsRepo.GetByIdAsync(request.NewsId);
+            var news = await newsRepo.GetByIdAsync(request.NewsId);
             if (news == null)
             {
                 throw new ValidationException("News không tồn tại.");

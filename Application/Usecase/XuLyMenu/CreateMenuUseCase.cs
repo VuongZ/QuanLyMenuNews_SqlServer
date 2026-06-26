@@ -9,15 +9,15 @@ namespace Application.XuLyMenu.UseCases
 {
     public class CreateMenuUseCase : IRequestHandler<CreateMenuRequest, bool>
     {
-        private readonly IMenuRepo _menuRepo;
-        private readonly INewsRepo _newsRepo;
+        private readonly IMenuRepo menuRepo;
+        private readonly INewsRepo newsRepo;
         private readonly IUnitOfWork _uow;
         private readonly IWebsiteLocalizationWardRepo _wardRepo;
 
         public CreateMenuUseCase(IMenuRepo menuRepo,INewsRepo newsRepo,IUnitOfWork uow,IWebsiteLocalizationWardRepo wardRepo)
         {
-            _menuRepo  = menuRepo;
-            _newsRepo  = newsRepo;
+            menuRepo  = menuRepo;
+            newsRepo  = newsRepo;
             _uow       = uow;
             _wardRepo  = wardRepo;
         }
@@ -26,7 +26,7 @@ namespace Application.XuLyMenu.UseCases
             await _uow.BeginTransactionAsync(cancellationToken);
             try
             {
-                var existing = await _menuRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
+                var existing = await menuRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
                 if (existing != null)
                 {
                     throw new ValidationException(new[]
@@ -40,13 +40,13 @@ namespace Application.XuLyMenu.UseCases
                 {
                     Name       = request.Name,
                     Slug       = request.Slug.Trim().ToLower(),
-                    created_at = DateTime.UtcNow,
-                    updated_at = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
 
                 foreach (var item in request.DanhSachNews)
                 {
-                    var news = await _newsRepo.GetBySlugAsync(item.Slug.Trim().ToLower());
+                    var news = await newsRepo.GetBySlugAsync(item.Slug.Trim().ToLower());
                     if (news != null)
                     {
                         if (!string.Equals(news.Title?.Trim(), item.Title.Trim(), StringComparison.OrdinalIgnoreCase))
@@ -57,26 +57,22 @@ namespace Application.XuLyMenu.UseCases
                         menu.News.Add(news);
                         continue;
                     }
-                    var wardId = await ResolveWardIdAsync(
-                        item.ProvinceId,
-                        item.WardId,
-                        item.Address);
+                    var wardId = await ResolveWardIdAsync(item.ProvinceId,item.WardId,item.Address);
                     news = new News
                     {
                         Title      = item.Title,
                         Slug       = item.Slug.Trim().ToLower(),
                         Content    = item.Content,
-                        thumbnail  = item.Thumbnail,
+                        Thumbnail  = item.Thumbnail,
                         Address    = string.IsNullOrWhiteSpace(item.Address) ? null : item.Address.Trim(),
                         WardId     = wardId,
-                        created_at = DateTime.UtcNow,
-                        updated_at = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     };
-
-                    await _newsRepo.AddAsync(news);
+                    await newsRepo.AddAsync(news);
                     menu.News.Add(news);
                 }
-                await _menuRepo.AddAsync(menu);
+                await menuRepo.AddAsync(menu);
                 await _uow.CommitAsync(cancellationToken);
                 return true;
             }

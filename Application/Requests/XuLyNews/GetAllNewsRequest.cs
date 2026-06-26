@@ -4,7 +4,7 @@ using MediatR;
 
 namespace Application.XuLyNews.Requests
 {
-    public class GetAllNewsRequest : IRequest<IAsyncEnumerable<NewsResponseDto>>
+    public class GetAllNewsRequest : IRequest<IEnumerable<NewsResponseDto>>
     {
         
     }

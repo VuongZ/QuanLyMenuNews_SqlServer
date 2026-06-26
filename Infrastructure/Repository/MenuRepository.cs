@@ -11,45 +11,44 @@ public class MenuRepository : Repository<Menu> , IMenuRepo
     {}
           public async Task<Menu?> GetBySlugAsync(string slug)
     {
-        return await _dbSet.FirstOrDefaultAsync(x => x.Slug == slug && x.is_deleted == false);
+        return await dbset.FirstOrDefaultAsync(x => x.Slug == slug && x.IsDeleted == false);
     }
      public async Task<Menu?> GetByIdWithNewsAsync(int id)
     {
         return await GetAllWithNewsQuery().FirstOrDefaultAsync(m => m.Id == id);
             
     }
-
-    public IAsyncEnumerable<Menu> GetAllWithNewsAsync()
+    public IEnumerable<Menu> GetAllWithNewsAsync()
     {
-        return  GetAllWithNewsQuery().AsAsyncEnumerable();
+        return  GetAllWithNewsQuery().AsEnumerable();
      
     }
     private IQueryable<Menu> GetAllWithNewsQuery()
 {
-    return _context.Menus
-        .Where(m => !m.is_deleted)
+    return context.Menus
+        .Where(m => !m.IsDeleted)
         .Select(m => new Menu
         {
             Id = m.Id,
             Name = m.Name ?? string.Empty,
             Slug = m.Slug ?? string.Empty,
-            created_at = m.created_at,
-            updated_at = m.updated_at,
-            is_deleted = m.is_deleted,
+            CreatedAt = m.CreatedAt,
+            UpdatedAt = m.UpdatedAt,
+            IsDeleted = m.IsDeleted,
             News = m.News
-                .Where(n => !n.is_deleted)
+                .Where(n => !n.IsDeleted)
                 .Select(n => new News
                 {
                     Id = n.Id,
                     Title = n.Title ?? string.Empty,
                     Slug = n.Slug   ?? string.Empty,
                     Content = n.Content,
-                    thumbnail = n.thumbnail,
+                    Thumbnail = n.Thumbnail,
                     Address = n.Address,
                     WardId = n.WardId,
-                     created_at = n.created_at,
-                    updated_at = n.updated_at,
-                    is_deleted = n.is_deleted,
+                    CreatedAt = n.CreatedAt,
+                    UpdatedAt = n.UpdatedAt,
+                    IsDeleted = n.IsDeleted,
                     Ward = n.Ward == null
                         ? null
                         : new WebsiteLocalizationWard

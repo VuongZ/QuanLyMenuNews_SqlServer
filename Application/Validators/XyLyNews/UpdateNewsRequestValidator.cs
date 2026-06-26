@@ -23,7 +23,7 @@ public class UpdateNewsRequestValidator : AbstractValidator<UpdateNewsRequest>
         RuleFor(x => x.content)
             .NotEmpty().WithMessage("Content không được để trống.");
 
-        RuleFor(x => x.thumbnail)
+        RuleFor(x => x.Thumbnail)
             .MaximumLength(255).WithMessage("Thumbnail tối đa 255 ký tự.");
     }
 }

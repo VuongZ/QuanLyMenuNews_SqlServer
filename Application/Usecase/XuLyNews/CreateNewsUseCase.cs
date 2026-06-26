@@ -9,15 +9,15 @@ namespace Application.XuLyNews.UseCases;
 
 public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
 {
-    private readonly IMenuRepo _menuRepo;
-    private readonly INewsRepo _newsRepo;
+    private readonly IMenuRepo menuRepo;
+    private readonly INewsRepo newsRepo;
     private readonly IWebsiteLocalizationWardRepo _wardRepo;
     private readonly IUnitOfWork _uow;
 
     public CreateNewsUseCase(IMenuRepo menuRepo,INewsRepo newsRepo,IWebsiteLocalizationWardRepo wardRepo,IUnitOfWork uow)
     {
-        _menuRepo = menuRepo;
-        _newsRepo = newsRepo;
+        menuRepo = menuRepo;
+        newsRepo = newsRepo;
         _wardRepo = wardRepo;
         _uow = uow;
     }
@@ -26,7 +26,7 @@ public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
         await _uow.BeginTransactionAsync(cancellationToken);
         try
         {
-            var existing = await _newsRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
+            var existing = await newsRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
             if (existing != null)
             {
                 throw new ValidationException(new[]
@@ -42,15 +42,15 @@ public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
                 Title      = request.Title.Trim(),
                 Slug       = request.Slug.Trim().ToLower(),
                 Content    = request.Content,
-                thumbnail  = request.Thumbnail,
+                Thumbnail  = request.Thumbnail,
                 Address    = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
                 WardId     = wardId,
-                created_at = DateTime.UtcNow,
-                updated_at = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
             foreach (var item in request.DanhSachMenus)
             {
-                var menu = await _menuRepo.GetBySlugAsync(item.Slug.Trim().ToLower());
+                var menu = await menuRepo.GetBySlugAsync(item.Slug.Trim().ToLower());
                 if (menu != null)
                 {
                     if (!string.Equals(menu.Name?.Trim(), item.Name.Trim(), StringComparison.OrdinalIgnoreCase))
@@ -69,14 +69,14 @@ public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
                     {
                         Name       = item.Name.Trim(),
                         Slug       = item.Slug.Trim().ToLower(),
-                        created_at = DateTime.UtcNow,
-                        updated_at = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     };
-                    await _menuRepo.AddAsync(menu);
+                    await menuRepo.AddAsync(menu);
                 }
                 news.Menu.Add(menu);
             }
-            await _newsRepo.AddAsync(news);
+            await newsRepo.AddAsync(news);
             await _uow.CommitAsync(cancellationToken);
             return true;
         }

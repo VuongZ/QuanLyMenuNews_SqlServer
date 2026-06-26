@@ -10,16 +10,16 @@ namespace Application.Usecase.XuLyMenu;
 public class UpdateMenuUseCase
     : IRequestHandler<UpdateMenuRequest, bool>
 {
-    private readonly IMenuRepo _menuRepo;
-    private readonly INewsRepo _newsRepo;
+    private readonly IMenuRepo menuRepo;
+    private readonly INewsRepo newsRepo;
     IMenuNewsRepo _menuNewsRepo;
     IWebsiteLocalizationWardRepo _wardRepo;
     private readonly IUnitOfWork _uow;
 
     public UpdateMenuUseCase(IMenuRepo menuRepo, INewsRepo newsRepo, IUnitOfWork uow, IMenuNewsRepo menuNewsRepo, IWebsiteLocalizationWardRepo wardRepo)
     {
-        _menuRepo = menuRepo;
-        _newsRepo = newsRepo;
+        menuRepo = menuRepo;
+        newsRepo = newsRepo;
         _uow = uow;
         _menuNewsRepo = menuNewsRepo;
         _wardRepo = wardRepo;
@@ -31,7 +31,7 @@ public class UpdateMenuUseCase
         try
         {
             var normalizedMenuSlug = request.Slug.Trim().ToLowerInvariant();
-            var duplicateMenu = await _menuRepo.GetBySlugAsync(normalizedMenuSlug);
+            var duplicateMenu = await menuRepo.GetBySlugAsync(normalizedMenuSlug);
             if (duplicateMenu != null &&
                 duplicateMenu.Id != request.Id)
             {
@@ -43,7 +43,7 @@ public class UpdateMenuUseCase
                     )
                 });
             }
-            var menu = await _menuRepo.GetByIdAsync(request.Id);
+            var menu = await menuRepo.GetByIdAsync(request.Id);
             if (menu == null)
             {
                 await _uow.RollbackAsync(cancellationToken);
@@ -51,9 +51,8 @@ public class UpdateMenuUseCase
             }
             menu.Name = request.Name.Trim();
             menu.Slug = normalizedMenuSlug;
-            menu.updated_at = DateTime.UtcNow;
-            await _menuRepo.UpdateAsync(menu);
-
+            menu.UpdatedAt = DateTime.UtcNow;
+            await menuRepo.UpdateAsync(menu);
             var requestedNewsIds = new List<int>();
             foreach (var item in request.DanhSachNews)
             {
@@ -62,7 +61,7 @@ public class UpdateMenuUseCase
 
                 if (item.Id.HasValue)
                 {
-                    news = await _newsRepo.GetByIdAsync(item.Id.Value);
+                    news = await newsRepo.GetByIdAsync(item.Id.Value);
                     if (news == null)
                     {
                         throw new ValidationException(new[]
@@ -73,7 +72,7 @@ public class UpdateMenuUseCase
                             )
                         });
                     }
-                    var duplicateNews = await _newsRepo.GetBySlugAsync(normalizedNewsSlug);
+                    var duplicateNews = await newsRepo.GetBySlugAsync(normalizedNewsSlug);
                     if (duplicateNews != null && duplicateNews.Id != news.Id)
                     {
                         throw new ValidationException(new[]
@@ -88,15 +87,15 @@ public class UpdateMenuUseCase
                     news.Title      = item.Title.Trim();
                     news.Slug       = normalizedNewsSlug;
                     news.Content    = item.Content;
-                    news.thumbnail  = string.IsNullOrWhiteSpace(item.Thumbnail) ? null : item.Thumbnail.Trim();
+                    news.Thumbnail  = string.IsNullOrWhiteSpace(item.Thumbnail) ? null : item.Thumbnail.Trim();
                     news.Address    = string.IsNullOrWhiteSpace(item.Address)   ? null : item.Address.Trim();
                     news.WardId     = wardId;
-                    news.updated_at = DateTime.UtcNow;
-                    await _newsRepo.UpdateAsync(news);
+                    news.UpdatedAt = DateTime.UtcNow;
+                    await newsRepo.UpdateAsync(news);
                 }
                 else
                 {
-                    var existingNews = await _newsRepo.GetBySlugAsync(normalizedNewsSlug);
+                    var existingNews = await newsRepo.GetBySlugAsync(normalizedNewsSlug);
                     if (existingNews != null)
                     {
                         if (!string.Equals(
@@ -122,14 +121,14 @@ public class UpdateMenuUseCase
                             Title      = item.Title.Trim(),
                             Slug       = normalizedNewsSlug,
                             Content    = item.Content,
-                            thumbnail  = string.IsNullOrWhiteSpace(item.Thumbnail) ? null : item.Thumbnail.Trim(),
+                            Thumbnail  = string.IsNullOrWhiteSpace(item.Thumbnail) ? null : item.Thumbnail.Trim(),
                             Address    = string.IsNullOrWhiteSpace(item.Address)   ? null : item.Address.Trim(),
                             WardId     = wardId,
-                            created_at = DateTime.UtcNow,
-                            updated_at = DateTime.UtcNow
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
                         };
 
-                        await _newsRepo.AddAsync(news);
+                        await newsRepo.AddAsync(news);
                         await _uow.SaveChangesAsync(cancellationToken);
                     }
                 }

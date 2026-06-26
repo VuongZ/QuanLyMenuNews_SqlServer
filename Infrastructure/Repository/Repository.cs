@@ -6,34 +6,34 @@ using Infrastructure.Data;
 namespace Infrastructure.Repository;
 public abstract class Repository<T> : IRepository<T> where T : BaseId
 {
-    protected readonly AppDbContext _context;
-    protected readonly DbSet<T> _dbSet;
+    protected readonly AppDbContext context;
+    protected readonly DbSet<T> dbset;
     public Repository (AppDbContext appContext)
     {
-        _context=appContext;
-        _dbSet=appContext.Set<T>();
+        context=appContext;
+        dbset=appContext.Set<T>();
     }
    public async Task<IEnumerable<T>> GetAllAsync()
     {
-        return await _dbSet.Where(e=> e.is_deleted==false).ToListAsync();
+        return await dbset.Where(e=> e.IsDeleted==false).ToListAsync();
     }
     
     public async Task<T> AddAsync(T entity)
     {
-        await _dbSet.AddAsync(entity);
- 
+        await dbset.AddAsync(entity);
+
         return entity;
     }
 
     public async Task UpdateAsync(T entity)
     {
-        _dbSet.Update(entity);
-   
+        dbset.Update(entity);
+
     }
 
     public async Task<T?> GetByIdAsync(int id)
     {
-       return await _dbSet.FirstOrDefaultAsync(e=>e.Id==id && e.is_deleted==false);
+        return await dbset.FirstOrDefaultAsync(e=>e.Id==id && e.IsDeleted==false);
     }
     public async Task DeleteAsync(int id)
     {
@@ -42,19 +42,15 @@ public abstract class Repository<T> : IRepository<T> where T : BaseId
         {
             return;
         }
-        _dbSet.Remove(entity);
-       
+        dbset.Remove(entity);
     }
     public async Task<bool> ExistsAsync(int id)
 {
-      var entity = await _dbSet
-            .FirstOrDefaultAsync(x => x.Id == id  && !x.is_deleted);
-
+    var entity = await dbset.FirstOrDefaultAsync(x => x.Id == id  && !x.IsDeleted);
         if (entity == null)
         {
             return false;
         }
-
         return true;
 }
 
@@ -65,30 +61,24 @@ public abstract class Repository<T> : IRepository<T> where T : BaseId
         {
             return;
         }
-        entity.is_deleted=true;
-        entity.deleted_at=DateTime.UtcNow;
-        _dbSet.Update(entity);
+        entity.IsDeleted=true;
+        entity.DateledAt=DateTime.UtcNow;
+        dbset.Update(entity);
 
     }
     public async Task<int> SoftDeleteManyAsync(IEnumerable<int> ids)
 {
     var distinctIds = ids.Distinct().ToList();
-
-    var entities = await _dbSet
-        .Where(x =>
-            distinctIds.Contains(x.Id) &&
-            !x.is_deleted)
+    var entities = await dbset
+        .Where(x =>distinctIds.Contains(x.Id) &&!x.IsDeleted)
         .ToListAsync();
-
     var now = DateTime.UtcNow;
-
     foreach (var entity in entities)
     {
-        entity.is_deleted = true;
-        entity.deleted_at = now;
-        entity.updated_at = now;
+        entity.IsDeleted = true;
+        entity.DateledAt = now;
+        entity.UpdatedAt = now;
     }
-
     return entities.Count;
 }
 }

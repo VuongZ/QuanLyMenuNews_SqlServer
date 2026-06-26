@@ -99,7 +99,7 @@ public class News : BaseId
     public string? Title { get; set; }
     public string? Slug { get; set; }
     public string? Content { get; set; }
-    public string? thumbnail { get; set; }
+    public string? Thumbnail { get; set; }
     public ICollection<Menu> Menu { get; set; } = new List<Menu>();
 }
 ```
@@ -110,9 +110,9 @@ public class News : BaseId
 public abstract class BaseId
 {
     public int Id { get; set; }
-    public bool is_deleted { get; set; } = false;
-    public DateTime? created_at { get; set; }
-    public DateTime? updated_at { get; set; }
+    public bool IsDeleted { get; set; } = false;
+    public DateTime? CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public DateTime? deleted_at { get; set; }
 }
 ```
@@ -270,13 +270,13 @@ http://localhost:<port>/swagger
       "title": "Bài viết 1",
       "slug": "bai-viet-1",
       "content": "Nội dung bài viết 1",
-      "thumbnail": "img1.jpg"
+      "Thumbnail": "img1.jpg"
     },
     {
       "title": "Bài viết 2",
       "slug": "bai-viet-2",
       "content": "Nội dung bài viết 2",
-      "thumbnail": "img2.jpg"
+      "Thumbnail": "img2.jpg"
     }
   ]
 }
@@ -289,7 +289,7 @@ http://localhost:<port>/swagger
   "title": "Tin công nghệ mới",
   "slug": "tin-cong-nghe-moi",
   "content": "Nội dung tin công nghệ mới",
-  "thumbnail": "tech.jpg",
+  "Thumbnail": "tech.jpg",
   "danhSachMenus": [
     {
       "name": "Công nghệ",
@@ -319,7 +319,7 @@ http://localhost:<port>/swagger
   "title": "Bài viết đã cập nhật",
   "slug": "bai-viet-da-cap-nhat",
   "content": "Nội dung đã cập nhật",
-  "thumbnail": "updated.jpg"
+  "Thumbnail": "updated.jpg"
 }
 ```
 
@@ -373,14 +373,14 @@ Project sử dụng cơ chế **xóa mềm**.
 Khi xóa Menu hoặc News, dữ liệu không bị xóa khỏi database mà chỉ cập nhật:
 
 ```csharp
-is_deleted = true;
+IsDeleted = true;
 deleted_at = DateTime.Now;
 ```
 
 Các truy vấn lấy danh sách sẽ chỉ lấy dữ liệu có:
 
 ```csharp
-is_deleted == false
+IsDeleted == false
 ```
 
 Cách này giúp có thể khôi phục dữ liệu về sau nếu cần.

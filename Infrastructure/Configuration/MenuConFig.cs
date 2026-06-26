@@ -10,16 +10,15 @@ namespace Infrastructure.Configuration
         {
             builder.ToTable("menus");
             builder.HasKey(x => x.Id);
-            builder.Property(sv => sv.Id)
-            .HasColumnName("Menu_Id")
-            .ValueGeneratedOnAdd();
-            builder.Property(x => x.is_deleted)
-            .HasColumnName("is_deleted")
-            .HasColumnType("bit");
-            builder.HasIndex(x => x.Slug)
-            .IsUnique();
-            builder.Property(x => x.Name).HasMaxLength(255).IsRequired();
-            builder.Property(x => x.Slug).HasMaxLength(255).IsRequired();
+            builder.Property(sv => sv.Id).HasColumnName("Menu_Id").ValueGeneratedOnAdd();
+            builder.Property(x => x.IsDeleted).HasColumnName("IsDeleted");
+            builder.HasIndex(x => x.Slug);
+            builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(255);
+            builder.Property(x => x.Slug).HasColumnName("slug").HasMaxLength(255);
+            builder.Property(x => x.IsDeleted).HasColumnName("is_deleted");
+            builder.Property(x => x.CreatedAt).HasColumnName("created_at");
+            builder.Property(x => x.UpdatedAt).HasColumnName("updated_at");
+            builder.Property(x => x.DateledAt).HasColumnName("deleted_at");
         }   
     }
 

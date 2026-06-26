@@ -9,14 +9,14 @@ namespace Application.Usecase.XuLyMenu;
 public class DeleteManyMenuUseCase
     : IRequestHandler<DeleteManyMenuRequest, int>
 {
-    private readonly IMenuRepo _menuRepo;
+    private readonly IMenuRepo menuRepo;
     private readonly IUnitOfWork _uow;
 
     public DeleteManyMenuUseCase(
         IMenuRepo menuRepo,
         IUnitOfWork uow)
     {
-        _menuRepo = menuRepo;
+        menuRepo = menuRepo;
         _uow = uow;
     }
 
@@ -29,16 +29,10 @@ public class DeleteManyMenuUseCase
     try
     {
         var ids = request.Ids.Distinct().ToList();
-        var deletedCount =await _menuRepo.SoftDeleteManyAsync(ids);
+        var deletedCount =await menuRepo.SoftDeleteManyAsync(ids);
         if (deletedCount != ids.Count)
         {
-            throw new ValidationException(new[]
-            {
-                new ValidationFailure(
-                    nameof(request.Ids),
-                    "Có Menu không tồn tại hoặc đã bị xóa."
-                )
-            });
+            throw new ValidationException(new[]{new ValidationFailure(nameof(request.Ids), "Có Menu không tồn tại hoặc đã bị xóa.")});
         }
         await _uow.CommitAsync(cancellationToken);
         return deletedCount;

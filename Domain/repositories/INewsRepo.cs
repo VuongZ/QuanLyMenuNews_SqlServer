@@ -7,7 +7,7 @@ namespace Domain.repositories
         Task<News?> GetBySlugAsync(string slug);
         
         Task<News?> GetByIdWithMenusAsync(int id);
-        IAsyncEnumerable<News> GetAllWithMenusAsync();
+        IEnumerable<News> GetAllWithMenusAsync();
 
     }
 }

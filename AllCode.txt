@@ -1,0 +1,4059 @@
+﻿
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\Program.cs =====
+
+using Application.Common;
+using Application.DTO;
+using Application.XuLyMenu.UseCases;
+using Domain.repositories;
+using FluentValidation;
+using Infrastructure.Data;
+using Infrastructure.Repositories;
+using Infrastructure.Repository;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IMenuRepo, MenuRepository>();
+builder.Services.AddScoped<INewsRepo, NewsRepository>();
+builder.Services.AddScoped<IMenuNewsRepo, MenuNewsRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddSwaggerGen();
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(GetAllMenuUseCase).Assembly));
+builder.Services.AddControllers()
+    .AddJsonOptions(o =>
+        o.JsonSerializerOptions.ReferenceHandler 
+            = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
+builder.Services.AddValidatorsFromAssembly(typeof(GetAllMenuUseCase).Assembly);
+builder.Services.AddScoped<
+    IWebsiteLocalizationWardRepo,
+    WebsiteLocalizationWardRepository>();
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+var app = builder.Build();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    
+    app.UseSwaggerUI();
+}
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (FluentValidation.ValidationException ex)
+    {
+        context.Response.StatusCode = StatusCodes.Status400BadRequest;
+        context.Response.ContentType = "application/json";
+
+        var errors = ex.Errors
+            .GroupBy(e => e.PropertyName)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(e => e.ErrorMessage).ToArray()
+            );
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            message = "Dá»¯ liá»‡u khÃ´ng há»£p lá»‡",
+            errors
+        });
+    }
+});
+app.UseHttpsRedirection();
+
+
+app.MapControllers(); 
+app.Run();
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\Controller\MenuController.cs =====
+
+using Application.Requests.XuLyMenu;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Api.Controller;
+[ApiController]
+[Route("api/[controller]")]
+public class MenuController : ControllerBase
+{
+        private readonly IMediator _mediator;
+
+    public MenuController( IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+      [HttpGet]
+        public async Task<IActionResult> GetAll()
+{
+    var result = await _mediator.Send(new GetAllMenuRequest());
+
+    return Ok(result);
+}
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var result = await _mediator.Send(new GetMenuByIdRequest { id = id });
+        if (result == null)
+        {
+            return NotFound();
+        }
+        return Ok(result);
+    }
+    [HttpPost]
+    public async Task<IActionResult> Create(CreateMenuRequest request)
+    {
+        var result = await _mediator.Send(request);
+        return Ok(result);
+    }
+     [HttpPut("{id}")]
+public async Task<IActionResult> Update(
+    int id,
+    UpdateMenuRequest request)
+{
+    request.Id = id;
+
+    var result = await _mediator.Send(request);
+
+    if (!result)
+    {
+        return NotFound();
+    }
+
+    return Ok(new
+    {
+        message = "Cáº­p nháº­t Menu vÃ  danh sÃ¡ch News thÃ nh cÃ´ng."
+    });
+}
+      [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var result = await _mediator.Send(new DeleteMenuRequest { Id = id });
+        if (!result) return NotFound();
+        return Ok(result);
+    }
+[HttpDelete("delete-many")]
+public async Task<IActionResult> DeleteMany(
+    [FromBody] DeleteManyMenuRequest request)
+{
+    var deletedCount = await _mediator.Send(request);
+
+    return Ok(new
+    {
+        message = "XÃ³a nhiá»u Menu thÃ nh cÃ´ng.",
+        deletedCount
+    });
+}
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\Controller\MenuNewsController.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Api.Controller;
+
+[ApiController]
+[Route("api/[controller]")]
+public class MenuNewsController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public MenuNewsController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _mediator.Send(new GetAllMenuNewsRequest());
+        return Ok(result);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] int? menuId, [FromQuery] int? newsId)
+    {
+        var result = await _mediator.Send(new SearchMenuNewsRequest
+        {
+            MenuId = menuId,
+            NewsId = newsId
+        });
+        return Ok(result);
+    }
+
+    [HttpGet("{menuId}/{newsId}")]
+    public async Task<IActionResult> GetById(int menuId, int newsId)
+    {
+        var result = await _mediator.Send(new GetMenuNewsByIdRequest
+        {
+            MenuId = menuId,
+            NewsId = newsId
+        });
+
+        if (result == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create(CreateMenuNewsRequest request)
+    {
+        var result = await _mediator.Send(request);
+        return Ok(result);
+    }
+
+    [HttpPut("{menuId}/{newsId}")]
+    public async Task<IActionResult> Update(int menuId, int newsId, UpdateMenuNewsRequest request)
+    {
+        request.OldMenuId = menuId;
+        request.OldNewsId = newsId;
+
+        var result = await _mediator.Send(request);
+        if (!result)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+
+    [HttpDelete("{menuId}/{newsId}")]
+    public async Task<IActionResult> Delete(int menuId, int newsId)
+    {
+        var result = await _mediator.Send(new DeleteMenuNewsRequest
+        {
+            MenuId = menuId,
+            NewsId = newsId
+        });
+
+        if (!result)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\Controller\NewsController.cs =====
+
+using Microsoft.AspNetCore.Mvc;
+using MediatR;
+using Application.XuLyNews.Requests;
+using Application.Requests.XuLyNews;
+
+namespace Api.Controller;
+[ApiController]
+[Route("api/[controller]")]
+public class NewsController : ControllerBase
+{
+    private readonly IMediator _mediator;
+    public NewsController(IMediator mediator)
+    {
+        _mediator=mediator;
+    }
+[HttpGet]
+public async Task<IActionResult> GetAllNews()
+{
+    var news = await _mediator.Send(new GetAllNewsRequest());
+
+    return Ok(news);
+}
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetNewsById(int id)
+    {
+        var news = await _mediator.Send(new GetNewsByIdRequest { id = id });
+        if (news == null)
+        {
+            return NotFound();
+        }
+        return Ok(news);
+    }
+    [HttpPost]
+    public async Task<IActionResult> CreateNews(CreateNewsRequest request)
+    {
+        var result = await _mediator.Send(request);
+        return Ok(result);
+    }
+     [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateNews(int id, UpdateNewsRequest request)
+    {
+        request.id = id;
+        var result = await _mediator.Send(request);
+        if (!result) return NotFound();
+        return Ok(result);
+    }
+      [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteNews(int id)
+    {
+        var result = await _mediator.Send(new DeleteNewsRequest { id = id });
+        if (!result) return NotFound();
+        return Ok(result);
+    }
+    [HttpDelete("delete-many")]
+    public async Task<IActionResult> DeleteManyNews(
+        [FromBody] DeleteManyNewsRequest request)
+    {
+        var deletedCount = await _mediator.Send(request);
+
+        return Ok(new
+        {
+            message = "XÃ³a nhiá»u News thÃ nh cÃ´ng.",
+            deletedCount
+        });
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net10.0\.NETCoreApp,Version=v10.0.AssemblyAttributes.cs =====
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v10.0", FrameworkDisplayName = ".NET 10.0")]
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net10.0\Api.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Api")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyProductAttribute("Api")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Api")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net10.0\Api.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using Microsoft.AspNetCore.Builder;
+global using Microsoft.AspNetCore.Hosting;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.AspNetCore.Routing;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Logging;
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Net.Http.Json;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net10.0\Presentation.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Presentation")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyProductAttribute("Presentation")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Presentation")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net10.0\Presentation.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using Microsoft.AspNetCore.Builder;
+global using Microsoft.AspNetCore.Hosting;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.AspNetCore.Routing;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Logging;
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Net.Http.Json;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs =====
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net8.0\Api.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Api")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f189dd4bdfd0f7ab0d556c412c45d0456fc2dd0b")]
+[assembly: System.Reflection.AssemblyProductAttribute("Api")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Api")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net8.0\Api.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using Microsoft.AspNetCore.Builder;
+global using Microsoft.AspNetCore.Hosting;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.AspNetCore.Routing;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Logging;
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Net.Http.Json;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net8.0\Api.MvcApplicationPartsAssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ApplicationPartAttribute("Microsoft.AspNetCore.OpenApi")]
+[assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ApplicationPartAttribute("Swashbuckle.AspNetCore.Annotations")]
+[assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ApplicationPartAttribute("Swashbuckle.AspNetCore.SwaggerGen")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\common\ValidationBehavior.cs =====
+
+using FluentValidation;
+using MediatR;
+
+namespace Application.Common;
+
+public class ValidationBehavior<TRequest, TResponse>
+    : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : notnull
+{
+    private readonly IEnumerable<IValidator<TRequest>> _validators;
+
+    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+    {
+        _validators = validators;
+    }
+
+    public async Task<TResponse> Handle(
+        TRequest request,
+        RequestHandlerDelegate<TResponse> next,
+        CancellationToken cancellationToken)
+    {
+        if (!_validators.Any())
+            return await next();
+
+        var context = new ValidationContext<TRequest>(request);
+
+        var validationResults = await Task.WhenAll(
+            _validators.Select(v => v.ValidateAsync(context, cancellationToken))
+        );
+
+        var failures = validationResults
+            .SelectMany(x => x.Errors)
+            .Where(x => x != null)
+            .ToList();
+
+        if (failures.Any())
+            throw new ValidationException(failures);
+
+        return await next();
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\DTO\INewsQueryRepository.cs =====
+
+namespace Application.DTO;
+public interface INewsQueryRepository
+{
+            Task<NewsResponseDto?> GetByIdWithMenusAsync(int id);
+      IAsyncEnumerable<NewsResponseDto> GetAllWithMenusAsync();
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\DTO\MenuBasicResponseDto.cs =====
+
+namespace Application.DTO;
+public class MenuBasicResponseDto
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public string Slug { get; set; } = string.Empty;
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\DTO\MenuNewsResponseDto.cs =====
+
+namespace Application.DTO;
+
+public class MenuNewsResponseDto
+{
+    public int MenuId { get; set; }
+    public int NewsId { get; set; }
+    public string MenuName { get; set; } = string.Empty;
+    public string NewsTitle { get; set; } = string.Empty;
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\DTO\MenusResponseDTO.cs =====
+
+namespace Application.DTO;
+
+public class MenuResponseDto
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public string Slug { get; set; } = string.Empty;
+    public IEnumerable<NewsResponseDto> News { get; set; } =  Enumerable.Empty<NewsResponseDto>();
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\DTO\NewsResponceDTO.cs =====
+
+namespace Application.DTO;
+public class NewsResponseDto
+{
+    public int Id { get; set; }
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Slug { get; set; } = string.Empty;
+
+    public string? Content { get; set; }
+
+    public string? Thumbnail { get; set; }
+
+    public string? Address { get; set; }
+
+    public int? WardId { get; set; }
+
+    public string? FullAddress { get; set; }
+
+    public WardInfoResponseDto? WardInfo { get; set; }
+
+    public IEnumerable<MenuBasicResponseDto> Menus { get; set; }  = Enumerable.Empty<MenuBasicResponseDto>();
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\DTO\WardInfoResponseDto.cs =====
+
+namespace Application.DTO;
+public class WardInfoResponseDto
+{
+    public int WardId { get; set; }
+
+    public int WardPid { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public string? NameEn { get; set; }
+
+    public string FullName { get; set; } = string.Empty;
+
+    public string? FullNameEn { get; set; }
+
+    public string Country { get; set; } = string.Empty;
+
+    public WardParentResponseDto? WardParent { get; set; }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\DTO\WardParentResponseDto.cs =====
+
+namespace Application.DTO;
+
+public class WardParentResponseDto
+{
+    public int WardId { get; set; }
+
+    public string Name { get; set; } = string.Empty;
+
+    public string? NameEn { get; set; }
+    public string Country { get; set; } = string.Empty;
+
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\obj\Debug\net10.0\.NETCoreApp,Version=v10.0.AssemblyAttributes.cs =====
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v10.0", FrameworkDisplayName = ".NET 10.0")]
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\obj\Debug\net10.0\Application.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Application")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyProductAttribute("Application")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Application")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\obj\Debug\net10.0\Application.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs =====
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\obj\Debug\net8.0\Application.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Application")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f189dd4bdfd0f7ab0d556c412c45d0456fc2dd0b")]
+[assembly: System.Reflection.AssemblyProductAttribute("Application")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Application")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\obj\Debug\net8.0\Application.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XulyMenu\CreateMenuRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyMenu
+{
+    public class CreateMenuRequest : IRequest<bool>
+    {
+        public string Name { get; set; } = null!;
+        public string Slug { get; set; } = null!;
+        public List<NewsInputRequest> DanhSachNews { get; set; } = new();
+     
+    }
+       public class NewsInputRequest
+    {
+        public string Title { get; set; } = null!;
+        public string Slug { get; set; } = null!;
+        public string Content { get; set; } = null!;
+        public string Thumbnail { get; set; } = null!;
+        public int? ProvinceId { get; set; }
+        public int? WardId { get; set; } 
+
+        public string? Address { get; set; }
+    }
+    
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XulyMenu\DeleteManyMenuRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyMenu;
+
+public class DeleteManyMenuRequest : IRequest<int>
+{
+    public List<int> Ids { get; set; } = new();
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XulyMenu\DeleteMenuRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyMenu
+{
+    public class DeleteMenuRequest : IRequest<bool>
+
+    {
+        public int Id { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XulyMenu\GetAllMenuRequest.cs =====
+
+using Application.DTO;
+using Domain.entity;
+using MediatR;
+
+namespace Application.Requests.XuLyMenu
+{
+    public class GetAllMenuRequest : IRequest<IEnumerable< MenuResponseDto>>
+    {
+          
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XulyMenu\GetMenuByIdRequest.cs =====
+
+using Application.DTO;
+using Domain.entity;
+using MediatR;
+
+namespace Application.Requests.XuLyMenu
+{
+    public class GetMenuByIdRequest : IRequest<MenuResponseDto>
+    {
+        public int id { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XulyMenu\UpdateMenuRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyMenu;
+
+public class UpdateMenuRequest : IRequest<bool>
+{
+    public int Id { get; set; }
+
+    public string Name { get; set; } = null!;
+
+    public string Slug { get; set; } = null!;
+
+    public List<UpdateMenuNewsItemRequest> DanhSachNews { get; set; } = new();
+}
+
+public class UpdateMenuNewsItemRequest
+{
+    public int? Id { get; set; }
+
+    public string Title { get; set; } = null!;
+
+    public string Slug { get; set; } = null!;
+
+    public string Content { get; set; } = null!;
+
+    public string? Thumbnail { get; set; }
+    public int? ProvinceId { get; set; }
+    public int? WardId { get; set; }
+    public string? Address { get; set; }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyMenuNews\CreateMenuNewsRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyMenuNews
+{
+    public class CreateMenuNewsRequest : IRequest<bool>
+    {
+        public int MenuId { get; set; }
+        public int NewsId { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyMenuNews\DeleteMenuNewsRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyMenuNews
+{
+    public class DeleteMenuNewsRequest : IRequest<bool>
+    {
+        public int MenuId { get; set; }
+        public int NewsId { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyMenuNews\GetAllMenuNewsRequest.cs =====
+
+using Application.DTO;
+using MediatR;
+
+namespace Application.Requests.XuLyMenuNews
+{
+    public class GetAllMenuNewsRequest : IRequest<IEnumerable<MenuNewsResponseDto>>
+    {
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyMenuNews\GetMenuNewsByIdRequest.cs =====
+
+using Application.DTO;
+using MediatR;
+
+namespace Application.Requests.XuLyMenuNews
+{
+    public class GetMenuNewsByIdRequest : IRequest<MenuNewsResponseDto?>
+    {
+        public int MenuId { get; set; }
+        public int NewsId { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyMenuNews\SearchMenuNewsRequest.cs =====
+
+using Application.DTO;
+using MediatR;
+
+namespace Application.Requests.XuLyMenuNews
+{
+    public class SearchMenuNewsRequest : IRequest<IEnumerable<MenuNewsResponseDto>>
+    {
+        public int? MenuId { get; set; }
+        public int? NewsId { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyMenuNews\UpdateMenuNewsRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyMenuNews
+{
+    public class UpdateMenuNewsRequest : IRequest<bool>
+    {
+        public int OldMenuId { get; set; }
+        public int OldNewsId { get; set; }
+        public int MenuId { get; set; }
+        public int NewsId { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyNews\CreateNewsRequest.cs =====
+
+using Application.Requests.XuLyMenu;
+using MediatR;
+
+namespace Application.Requests.XuLyNews
+{
+public class CreateNewsRequest : IRequest<bool>
+{
+    public string Title { get; set; } = null!;
+    public string Slug { get; set; } = null!;
+    public string Content { get; set; } = null!;
+    public string Thumbnail { get; set; } = null!;
+
+    public string? Address { get; set; }
+    
+     public int? ProvinceId { get; set; }  
+    public int? WardId { get; set; }
+    public List<MenuInputRequest> DanhSachMenus { get; set; } = new();
+}
+ public class MenuInputRequest
+    {
+        public string Name { get; set; } = null!;
+        public string Slug { get; set; } = null!;
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyNews\DeleteManyNewsRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyNews;
+
+public class DeleteManyNewsRequest : IRequest<int>
+{
+    public List<int> Ids { get; set; } = new();
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyNews\DeleteNewsRequest.cs =====
+
+using Domain.entity;
+using MediatR;
+
+namespace Application.Requests.XuLyNews
+{
+    public class DeleteNewsRequest : IRequest<bool>
+    {
+        public int id { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyNews\GetAllNewsRequest.cs =====
+
+using Application.DTO;
+using Domain.entity;
+using MediatR;
+
+namespace Application.XuLyNews.Requests
+{
+    public class GetAllNewsRequest : IRequest<IAsyncEnumerable<NewsResponseDto>>
+    {
+        
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyNews\GetNewsById.cs =====
+
+using Application.DTO;
+using Domain.entity;
+using MediatR;
+
+namespace Application.Requests.XuLyNews
+{
+    public class GetNewsByIdRequest : IRequest<NewsResponseDto>
+    {
+        public int id { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Requests\XuLyNews\UpdateNewsRequest.cs =====
+
+using MediatR;
+
+namespace Application.Requests.XuLyNews
+{
+    public class UpdateNewsRequest : IRequest<bool>
+    {
+        public int id { get; set; }
+        public string ? title { get; set; } 
+        public string  slug { get; set; }= string.Empty;
+        public string ? content { get; set; }
+        public string ? Thumbnail { get; set; }
+        public int? ProvinceId { get; set; }
+        public int? WardId { get; set; }
+        public string? Address { get; set; }
+          public List<UpdateNewsMenuItemRequest> DanhSachMenus { get; set; }= new();
+    }
+    public class UpdateNewsMenuItemRequest
+    {
+    public int? Id { get; set; }
+
+    public string Name { get; set; } = null!;
+
+    public string Slug { get; set; } = null!;
+}
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenu\CreateMenuUseCase.cs =====
+
+using Domain.entity;
+using Domain.repositories;
+using Application.Requests.XuLyMenu;
+using MediatR;
+using FluentValidation;
+using FluentValidation.Results;
+
+namespace Application.XuLyMenu.UseCases
+{
+    public class CreateMenuUseCase : IRequestHandler<CreateMenuRequest, bool>
+    {
+        private readonly IMenuRepo menuRepo;
+        private readonly INewsRepo newsRepo;
+        private readonly IUnitOfWork _uow;
+        private readonly IWebsiteLocalizationWardRepo _wardRepo;
+
+        public CreateMenuUseCase(IMenuRepo menuRepo,INewsRepo newsRepo,IUnitOfWork uow,IWebsiteLocalizationWardRepo wardRepo)
+        {
+            menuRepo  = menuRepo;
+            newsRepo  = newsRepo;
+            _uow       = uow;
+            _wardRepo  = wardRepo;
+        }
+        public async Task<bool> Handle(CreateMenuRequest request, CancellationToken cancellationToken)
+        {
+            await _uow.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var existing = await menuRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
+                if (existing != null)
+                {
+                    throw new ValidationException(new[]
+                    {
+                        new ValidationFailure(
+                            nameof(request.Slug),
+                            $"Slug menu '{request.Slug}' Ä‘Ã£ tá»“n táº¡i.")
+                    });
+                }
+                var menu = new Menu
+                {
+                    Name       = request.Name,
+                    Slug       = request.Slug.Trim().ToLower(),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                foreach (var item in request.DanhSachNews)
+                {
+                    var news = await newsRepo.GetBySlugAsync(item.Slug.Trim().ToLower());
+                    if (news != null)
+                    {
+                        if (!string.Equals(news.Title?.Trim(), item.Title.Trim(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new ValidationException(
+                                $"Slug news '{item.Slug}' Ä‘Ã£ tá»“n táº¡i vá»›i tiÃªu Ä‘á» khÃ¡c.");
+                        }
+                        menu.News.Add(news);
+                        continue;
+                    }
+                    var wardId = await ResolveWardIdAsync(item.ProvinceId,item.WardId,item.Address);
+                    news = new News
+                    {
+                        Title      = item.Title,
+                        Slug       = item.Slug.Trim().ToLower(),
+                        Content    = item.Content,
+                        Thumbnail  = item.Thumbnail,
+                        Address    = string.IsNullOrWhiteSpace(item.Address) ? null : item.Address.Trim(),
+                        WardId     = wardId,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await newsRepo.AddAsync(news);
+                    menu.News.Add(news);
+                }
+                await menuRepo.AddAsync(menu);
+                await _uow.CommitAsync(cancellationToken);
+                return true;
+            }
+            catch
+            {
+                await _uow.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
+        private async Task<int?> ResolveWardIdAsync(int? provinceId, int? wardId, string? address)
+        {
+            var hasProvince = provinceId.HasValue;
+            var hasWard     = wardId.HasValue;
+            var hasAddress  = !string.IsNullOrWhiteSpace(address);
+            if (!hasProvince && !hasWard && !hasAddress)
+                return null;
+            if (!hasProvince || !hasWard || !hasAddress)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        "Address",
+                        "Pháº£i nháº­p Ä‘áº§y Ä‘á»§ tá»‰nh, phÆ°á»ng/xÃ£ vÃ  Ä‘á»‹a chá»‰.")
+                });
+            }
+            var province = await _wardRepo.GetByIdAsync(provinceId!.Value);
+            if (province == null || province.WardPid != 0)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        nameof(provinceId),
+                        $"KhÃ´ng tÃ¬m tháº¥y tá»‰nh/thÃ nh phá»‘ cÃ³ Id = {provinceId}.")
+                });
+            }
+            var ward = await _wardRepo.GetByIdAsync(wardId!.Value);
+            if (ward == null)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        nameof(wardId),
+                        $"KhÃ´ng tÃ¬m tháº¥y phÆ°á»ng/xÃ£ cÃ³ Id = {wardId}.")
+                });
+            }
+            if (ward.WardPid != provinceId!.Value)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        nameof(wardId),
+                        $"PhÆ°á»ng/xÃ£ Id = {wardId} khÃ´ng thuá»™c tá»‰nh Id = {provinceId}.")
+                });
+            }
+            return ward.WardId;
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenu\DeleteManyMenuUseCase.cs =====
+
+using Application.Requests.XuLyMenu;
+using Domain.repositories;
+using FluentValidation;
+using FluentValidation.Results;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenu;
+
+public class DeleteManyMenuUseCase
+    : IRequestHandler<DeleteManyMenuRequest, int>
+{
+    private readonly IMenuRepo menuRepo;
+    private readonly IUnitOfWork _uow;
+
+    public DeleteManyMenuUseCase(
+        IMenuRepo menuRepo,
+        IUnitOfWork uow)
+    {
+        menuRepo = menuRepo;
+        _uow = uow;
+    }
+
+   public async Task<int> Handle(
+    DeleteManyMenuRequest request,
+    CancellationToken cancellationToken)
+{
+    await _uow.BeginTransactionAsync(cancellationToken);
+
+    try
+    {
+        var ids = request.Ids.Distinct().ToList();
+        var deletedCount =await menuRepo.SoftDeleteManyAsync(ids);
+        if (deletedCount != ids.Count)
+        {
+            throw new ValidationException(new[]{new ValidationFailure(nameof(request.Ids), "CÃ³ Menu khÃ´ng tá»“n táº¡i hoáº·c Ä‘Ã£ bá»‹ xÃ³a.")});
+        }
+        await _uow.CommitAsync(cancellationToken);
+        return deletedCount;
+    }
+    catch
+    {
+        await _uow.RollbackAsync(cancellationToken);
+        throw;
+    }
+}
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenu\DeleteMenuUseCase.cs =====
+
+using Application.Requests.XuLyMenu;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenu;
+public class DeleteMenuUseCase : IRequestHandler<DeleteMenuRequest,bool>
+{
+       private readonly IMenuRepo _repo;
+          private readonly IUnitOfWork _uow;
+        public DeleteMenuUseCase(IMenuRepo repo,IUnitOfWork uow)
+        {
+            _repo = repo;
+            _uow = uow;
+        }
+
+    public async Task<bool> Handle(DeleteMenuRequest request, CancellationToken cancellationToken)
+    {
+          var menu = await _repo.GetByIdAsync(request.Id);
+            if (menu == null) return false;
+
+          await _repo.DeleteAsync(request.Id);
+         await _uow.SaveChangesAsync(cancellationToken);
+
+          return true;
+          
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenu\GetAllMenuUseCase.cs =====
+
+using MediatR;
+using Domain.entity;
+using Domain.repositories;
+using Application.Requests.XuLyMenu;
+using Application.DTO;
+using System.Runtime.CompilerServices;
+
+namespace Application.XuLyMenu.UseCases
+{
+
+    public class GetAllMenuUseCase : IRequestHandler<GetAllMenuRequest, IEnumerable<MenuResponseDto>>
+    {
+        private readonly IMenuRepo menuRepo;
+        public GetAllMenuUseCase(IMenuRepo Repo)
+        {
+            menuRepo = Repo;
+        }
+
+        public Task<IEnumerable<MenuResponseDto>> Handle( GetAllMenuRequest request,CancellationToken cancellationToken)
+        {
+                return menuRepo.GetAllWithNewsAsync()
+                
+        }
+
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenu\GetMenuByIdUseCase.cs =====
+
+using Application.DTO;
+using Application.Mappers;
+using Application.Requests.XuLyMenu;
+using Domain.entity;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenu
+{
+    public class GetMenuByIdUseCase : IRequestHandler<GetMenuByIdRequest, MenuResponseDto?>
+    {
+        private readonly IMenuRepo  menuRepo;
+        
+        public GetMenuByIdUseCase(IMenuRepo  menuRepo)
+        {
+            menuRepo = menuRepo;
+        }
+        
+        public async Task<MenuResponseDto?> Handle(GetMenuByIdRequest request, CancellationToken cancellationToken)
+         {
+            var m = await menuRepo.GetByIdWithNewsAsync(request.id);
+            if (m == null) return null;
+            return m.ToDto();
+         }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenu\UpdateMenuUseCase.cs =====
+
+using Application.Requests.XuLyMenu;
+using Domain.entity;
+using Domain.repositories;
+using FluentValidation;
+using FluentValidation.Results;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenu;
+
+public class UpdateMenuUseCase
+    : IRequestHandler<UpdateMenuRequest, bool>
+{
+    private readonly IMenuRepo menuRepo;
+    private readonly INewsRepo newsRepo;
+    IMenuNewsRepo _menuNewsRepo;
+    IWebsiteLocalizationWardRepo _wardRepo;
+    private readonly IUnitOfWork _uow;
+
+    public UpdateMenuUseCase(IMenuRepo menuRepo, INewsRepo newsRepo, IUnitOfWork uow, IMenuNewsRepo menuNewsRepo, IWebsiteLocalizationWardRepo wardRepo)
+    {
+        menuRepo = menuRepo;
+        newsRepo = newsRepo;
+        _uow = uow;
+        _menuNewsRepo = menuNewsRepo;
+        _wardRepo = wardRepo;
+    }
+
+    public async Task<bool> Handle(UpdateMenuRequest request, CancellationToken cancellationToken)
+    {
+        await _uow.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var normalizedMenuSlug = request.Slug.Trim().ToLowerInvariant();
+            var duplicateMenu = await menuRepo.GetBySlugAsync(normalizedMenuSlug);
+            if (duplicateMenu != null &&
+                duplicateMenu.Id != request.Id)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        nameof(request.Slug),
+                        $"Slug Menu '{request.Slug}' Ä‘Ã£ tá»“n táº¡i."
+                    )
+                });
+            }
+            var menu = await menuRepo.GetByIdAsync(request.Id);
+            if (menu == null)
+            {
+                await _uow.RollbackAsync(cancellationToken);
+                return false;
+            }
+            menu.Name = request.Name.Trim();
+            menu.Slug = normalizedMenuSlug;
+            menu.UpdatedAt = DateTime.UtcNow;
+            await menuRepo.UpdateAsync(menu);
+            var requestedNewsIds = new List<int>();
+            foreach (var item in request.DanhSachNews)
+            {
+                var normalizedNewsSlug = item.Slug.Trim().ToLowerInvariant();
+                News? news;
+
+                if (item.Id.HasValue)
+                {
+                    news = await newsRepo.GetByIdAsync(item.Id.Value);
+                    if (news == null)
+                    {
+                        throw new ValidationException(new[]
+                        {
+                            new ValidationFailure(
+                                nameof(item.Id),
+                                $"KhÃ´ng tÃ¬m tháº¥y News Id = {item.Id.Value}."
+                            )
+                        });
+                    }
+                    var duplicateNews = await newsRepo.GetBySlugAsync(normalizedNewsSlug);
+                    if (duplicateNews != null && duplicateNews.Id != news.Id)
+                    {
+                        throw new ValidationException(new[]
+                        {
+                            new ValidationFailure(
+                                nameof(item.Slug),
+                                $"Slug News '{item.Slug}' Ä‘Ã£ tá»“n táº¡i."
+                            )
+                        });
+                    }
+                    var wardId = await ResolveWardIdAsync(item.ProvinceId, item.WardId, item.Address);
+                    news.Title      = item.Title.Trim();
+                    news.Slug       = normalizedNewsSlug;
+                    news.Content    = item.Content;
+                    news.Thumbnail  = string.IsNullOrWhiteSpace(item.Thumbnail) ? null : item.Thumbnail.Trim();
+                    news.Address    = string.IsNullOrWhiteSpace(item.Address)   ? null : item.Address.Trim();
+                    news.WardId     = wardId;
+                    news.UpdatedAt = DateTime.UtcNow;
+                    await newsRepo.UpdateAsync(news);
+                }
+                else
+                {
+                    var existingNews = await newsRepo.GetBySlugAsync(normalizedNewsSlug);
+                    if (existingNews != null)
+                    {
+                        if (!string.Equals(
+                                existingNews.Title?.Trim(),
+                                item.Title.Trim(),
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new ValidationException(new[]
+                            {
+                                new ValidationFailure(
+                                    nameof(item.Slug),
+                                    $"Slug News '{item.Slug}' Ä‘Ã£ tá»“n táº¡i vá»›i tiÃªu Ä‘á» khÃ¡c."
+                                )
+                            });
+                        }
+                        news = existingNews;
+                    }
+                    else
+                    {
+                        var wardId = await ResolveWardIdAsync(item.ProvinceId, item.WardId, item.Address);
+                        news = new News
+                        {
+                            Title      = item.Title.Trim(),
+                            Slug       = normalizedNewsSlug,
+                            Content    = item.Content,
+                            Thumbnail  = string.IsNullOrWhiteSpace(item.Thumbnail) ? null : item.Thumbnail.Trim(),
+                            Address    = string.IsNullOrWhiteSpace(item.Address)   ? null : item.Address.Trim(),
+                            WardId     = wardId,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+
+                        await newsRepo.AddAsync(news);
+                        await _uow.SaveChangesAsync(cancellationToken);
+                    }
+                }
+                if (!requestedNewsIds.Contains(news.Id))
+                {
+                    requestedNewsIds.Add(news.Id);
+                }
+            }
+            var currentNewsIds  = await _menuNewsRepo.GetNewsIdsByMenuIdAsync(menu.Id, cancellationToken);
+            var newsIdsToRemove = currentNewsIds.Except(requestedNewsIds).ToList();
+            var newsIdsToAdd    = requestedNewsIds.Except(currentNewsIds).ToList();
+            await _menuNewsRepo.RemoveByMenuAndNewsIdsAsync(menu.Id, newsIdsToRemove, cancellationToken);
+            foreach (var newsId in newsIdsToAdd)
+            {
+                await _menuNewsRepo.AddAsync(new MenuNews
+                {
+                    MenuId = menu.Id,
+                    NewsId = newsId
+                });
+            }
+            await _uow.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await _uow.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+    private async Task<int?> ResolveWardIdAsync(int? provinceId, int? wardId, string? address)
+    {
+        var hasProvince = provinceId.HasValue;
+        var hasWard     = wardId.HasValue;
+        var hasAddress  = !string.IsNullOrWhiteSpace(address);
+        if (!hasProvince && !hasWard && !hasAddress)
+            return null;
+        if (!hasProvince || !hasWard || !hasAddress)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    "Address",
+                    "Pháº£i nháº­p Ä‘áº§y Ä‘á»§ tá»‰nh/thÃ nh phá»‘, phÆ°á»ng/xÃ£ vÃ  Ä‘á»‹a chá»‰.")
+            });
+        }
+        var province = await _wardRepo.GetByIdAsync(provinceId!.Value);
+        if (province == null || province.WardPid != 0)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(provinceId),
+                    $"KhÃ´ng tÃ¬m tháº¥y tá»‰nh/thÃ nh phá»‘ cÃ³ Id = {provinceId}.")
+            });
+        }
+
+        var ward = await _wardRepo.GetByIdAsync(wardId!.Value);
+        if (ward == null)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(wardId),
+                    $"KhÃ´ng tÃ¬m tháº¥y phÆ°á»ng/xÃ£ cÃ³ Id = {wardId}.")
+            });
+        }
+        if (ward.WardPid != provinceId!.Value)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(wardId),
+                    $"PhÆ°á»ng/xÃ£ Id = {wardId} khÃ´ng thuá»™c tá»‰nh Id = {provinceId}.")
+            });
+        }
+        return ward.WardId;
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenuNews\CreateMenuNewsUseCase.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using Domain.entity;
+using Domain.repositories;
+using FluentValidation;
+using FluentValidation.Results;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenuNews
+{
+    public class CreateMenuNewsUseCase : IRequestHandler<CreateMenuNewsRequest, bool>
+    {
+        private readonly IMenuNewsRepo _menuNewsRepo;
+        private readonly IMenuRepo menuRepo;
+        private readonly INewsRepo newsRepo;
+        private readonly IUnitOfWork _uow;
+
+        public CreateMenuNewsUseCase(
+            IMenuNewsRepo menuNewsRepo,
+            IMenuRepo menuRepo,
+            INewsRepo newsRepo,
+            IUnitOfWork uow)
+        {
+            _menuNewsRepo = menuNewsRepo;
+            menuRepo = menuRepo;
+            newsRepo = newsRepo;
+            _uow = uow;
+        }
+
+     public async Task<bool> Handle(CreateMenuNewsRequest request, CancellationToken cancellationToken){
+    if (!await menuRepo.ExistsAsync(request.MenuId))
+    {
+        throw new ValidationException(new[]
+        {
+            new ValidationFailure(
+                nameof(request.MenuId),
+                $"KhÃ´ng tÃ¬m tháº¥y Menu cÃ³ Id = {request.MenuId}."
+            )
+        });
+    }
+
+    if (!await newsRepo.ExistsAsync(request.NewsId))
+    {
+        throw new ValidationException(new[]
+        {
+            new ValidationFailure(
+                nameof(request.NewsId),
+                $"KhÃ´ng tÃ¬m tháº¥y News cÃ³ Id = {request.NewsId}."
+            )
+        });
+    }
+
+    if (await _menuNewsRepo.ExistsAsync(
+        request.MenuId,
+        request.NewsId))
+    {
+        throw new ValidationException(new[]
+        {
+            new ValidationFailure(
+                "MenuNews",
+                "Quan há»‡ giá»¯a Menu vÃ  News Ä‘Ã£ tá»“n táº¡i."
+            )
+        });
+    }
+
+    await _menuNewsRepo.AddAsync(new MenuNews
+    {
+        MenuId = request.MenuId,
+        NewsId = request.NewsId
+    });
+
+    await _uow.SaveChangesAsync(cancellationToken);
+
+    return true;
+}
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenuNews\DeleteMenuNewsUseCase.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenuNews
+{
+    public class DeleteMenuNewsUseCase : IRequestHandler<DeleteMenuNewsRequest, bool>
+    {
+        private readonly IMenuNewsRepo _menuNewsRepo;
+        private readonly IUnitOfWork _uow;
+
+        public DeleteMenuNewsUseCase(IMenuNewsRepo menuNewsRepo, IUnitOfWork uow)
+        {
+            _menuNewsRepo = menuNewsRepo;
+            _uow = uow;
+        }
+
+        public async Task<bool> Handle(DeleteMenuNewsRequest request, CancellationToken cancellationToken)
+        {
+            var menuNews = await _menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
+            if (menuNews == null)
+            {
+                return false;
+            }
+
+            await _menuNewsRepo.DeleteAsync(request.MenuId, request.NewsId);
+            await _uow.SaveChangesAsync(cancellationToken);
+
+            return true;
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenuNews\GetAllMenuNewsUseCase.cs =====
+
+using Application.DTO;
+using Application.Requests.XuLyMenuNews;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenuNews
+{
+    public class GetAllMenuNewsUseCase : IRequestHandler<GetAllMenuNewsRequest, IEnumerable<MenuNewsResponseDto>>
+    {
+        private readonly IMenuNewsRepo _menuNewsRepo;
+
+        public GetAllMenuNewsUseCase(IMenuNewsRepo menuNewsRepo)
+        {
+            _menuNewsRepo = menuNewsRepo;
+        }
+
+        public async Task<IEnumerable<MenuNewsResponseDto>> Handle(GetAllMenuNewsRequest request, CancellationToken cancellationToken)
+        {
+            var menuNews = await _menuNewsRepo.GetAllAsync();
+            return menuNews.Select(MenuNewsMapper.ToDto);
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenuNews\GetMenuNewsByIdUseCase.cs =====
+
+using Application.DTO;
+using Application.Requests.XuLyMenuNews;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenuNews
+{
+    public class GetMenuNewsByIdUseCase : IRequestHandler<GetMenuNewsByIdRequest, MenuNewsResponseDto?>
+    {
+        private readonly IMenuNewsRepo _menuNewsRepo;
+
+        public GetMenuNewsByIdUseCase(IMenuNewsRepo menuNewsRepo)
+        {
+            _menuNewsRepo = menuNewsRepo;
+        }
+
+        public async Task<MenuNewsResponseDto?> Handle(GetMenuNewsByIdRequest request, CancellationToken cancellationToken)
+        {
+            var menuNews = await _menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
+            return menuNews == null ? null : MenuNewsMapper.ToDto(menuNews);
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenuNews\MenuNewsMapper.cs =====
+
+using Application.DTO;
+using Domain.entity;
+
+namespace Application.Usecase.XuLyMenuNews
+{
+    internal static class MenuNewsMapper
+    {
+        public static MenuNewsResponseDto ToDto(MenuNews menuNews)
+        {
+            return new MenuNewsResponseDto
+            {
+                MenuId = menuNews.MenuId,
+                NewsId = menuNews.NewsId,
+                MenuName = menuNews.Menu?.Name ?? string.Empty,
+                NewsTitle = menuNews.News?.Title ?? string.Empty
+            };
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenuNews\SearchMenuNewsUseCase.cs =====
+
+using Application.DTO;
+using Application.Requests.XuLyMenuNews;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenuNews
+{
+    public class SearchMenuNewsUseCase : IRequestHandler<SearchMenuNewsRequest, IEnumerable<MenuNewsResponseDto>>
+    {
+        private readonly IMenuNewsRepo _menuNewsRepo;
+
+        public SearchMenuNewsUseCase(IMenuNewsRepo menuNewsRepo)
+        {
+            _menuNewsRepo = menuNewsRepo;
+        }
+
+        public async Task<IEnumerable<MenuNewsResponseDto>> Handle(SearchMenuNewsRequest request, CancellationToken cancellationToken)
+        {
+            var menuNews = await _menuNewsRepo.SearchAsync(request.MenuId, request.NewsId);
+            return menuNews.Select(MenuNewsMapper.ToDto);
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyMenuNews\UpdateMenuNewsUseCase.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using Domain.entity;
+using Domain.repositories;
+using FluentValidation;
+using MediatR;
+
+namespace Application.Usecase.XuLyMenuNews
+{
+    public class UpdateMenuNewsUseCase : IRequestHandler<UpdateMenuNewsRequest, bool>
+    {
+        private readonly IMenuNewsRepo _menuNewsRepo;
+        private readonly IMenuRepo menuRepo;
+        private readonly INewsRepo newsRepo;
+        private readonly IUnitOfWork _uow;
+
+        public UpdateMenuNewsUseCase(
+            IMenuNewsRepo menuNewsRepo,
+            IMenuRepo menuRepo,
+            INewsRepo newsRepo,
+            IUnitOfWork uow)
+        {
+            _menuNewsRepo = menuNewsRepo;
+            menuRepo = menuRepo;
+            newsRepo = newsRepo;
+            _uow = uow;
+        }
+
+        public async Task<bool> Handle(UpdateMenuNewsRequest request, CancellationToken cancellationToken)
+        {
+            var oldMenuNews = await _menuNewsRepo.GetByIdAsync(request.OldMenuId, request.OldNewsId);
+            if (oldMenuNews == null)
+            {
+                return false;
+            }
+
+            var menu = await menuRepo.GetByIdAsync(request.MenuId);
+            if (menu == null)
+            {
+                throw new ValidationException("Menu khÃ´ng tá»“n táº¡i.");
+            }
+
+            var news = await newsRepo.GetByIdAsync(request.NewsId);
+            if (news == null)
+            {
+                throw new ValidationException("News khÃ´ng tá»“n táº¡i.");
+            }
+
+            var existing = await _menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
+            if (existing != null && (request.MenuId != request.OldMenuId || request.NewsId != request.OldNewsId))
+            {
+                throw new ValidationException("Menu_News Ä‘Ã£ tá»“n táº¡i.");
+            }
+
+            if (request.MenuId == request.OldMenuId && request.NewsId == request.OldNewsId)
+            {
+                return true;
+            }
+
+            await _menuNewsRepo.DeleteAsync(request.OldMenuId, request.OldNewsId);
+            await _menuNewsRepo.AddAsync(new MenuNews
+            {
+                MenuId = request.MenuId,
+                NewsId = request.NewsId
+            });
+            await _uow.SaveChangesAsync(cancellationToken);
+
+            return true;
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyNews\CreateNewsUseCase.cs =====
+
+using Domain.entity;
+using Domain.repositories;
+using MediatR;
+using Application.Requests.XuLyNews;
+using FluentValidation;
+using FluentValidation.Results;
+
+namespace Application.XuLyNews.UseCases;
+
+public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
+{
+    private readonly IMenuRepo menuRepo;
+    private readonly INewsRepo newsRepo;
+    private readonly IWebsiteLocalizationWardRepo _wardRepo;
+    private readonly IUnitOfWork _uow;
+
+    public CreateNewsUseCase(IMenuRepo menuRepo,INewsRepo newsRepo,IWebsiteLocalizationWardRepo wardRepo,IUnitOfWork uow)
+    {
+        menuRepo = menuRepo;
+        newsRepo = newsRepo;
+        _wardRepo = wardRepo;
+        _uow = uow;
+    }
+    public async Task<bool> Handle(CreateNewsRequest request, CancellationToken cancellationToken)
+    {
+        await _uow.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var existing = await newsRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
+            if (existing != null)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        nameof(request.Slug),
+                        $"Slug news '{request.Slug}' Ä‘Ã£ tá»“n táº¡i.")
+                });
+            }
+            var wardId = await ResolveWardIdAsync(request.ProvinceId,request.WardId,request.Address);
+            var news = new News
+            {
+                Title      = request.Title.Trim(),
+                Slug       = request.Slug.Trim().ToLower(),
+                Content    = request.Content,
+                Thumbnail  = request.Thumbnail,
+                Address    = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
+                WardId     = wardId,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            foreach (var item in request.DanhSachMenus)
+            {
+                var menu = await menuRepo.GetBySlugAsync(item.Slug.Trim().ToLower());
+                if (menu != null)
+                {
+                    if (!string.Equals(menu.Name?.Trim(), item.Name.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new ValidationException(new[]
+                        {
+                            new ValidationFailure(
+                                nameof(item.Slug),
+                                $"Slug menu '{item.Slug}' Ä‘Ã£ tá»“n táº¡i vá»›i tÃªn khÃ¡c.")
+                        });
+                    }
+                }
+                else
+                {
+                    menu = new Menu
+                    {
+                        Name       = item.Name.Trim(),
+                        Slug       = item.Slug.Trim().ToLower(),
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    await menuRepo.AddAsync(menu);
+                }
+                news.Menu.Add(menu);
+            }
+            await newsRepo.AddAsync(news);
+            await _uow.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await _uow.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    private async Task<int?> ResolveWardIdAsync(int? provinceId, int? wardId, string? address)
+    {
+        var hasProvince = provinceId.HasValue;
+        var hasWard     = wardId.HasValue;
+        var hasAddress  = !string.IsNullOrWhiteSpace(address);
+
+        if (!hasProvince && !hasWard && !hasAddress)
+            return null;
+        if (!hasProvince || !hasWard || !hasAddress)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    "Address",
+                    "Pháº£i nháº­p Ä‘áº§y Ä‘á»§ tá»‰nh, phÆ°á»ng/xÃ£ vÃ  Ä‘á»‹a chá»‰.")
+            });
+        }
+        var province = await _wardRepo.GetByIdAsync(provinceId!.Value);
+        if (province == null || province.WardPid != 0)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(provinceId),
+                    $"KhÃ´ng tÃ¬m tháº¥y tá»‰nh/thÃ nh phá»‘ cÃ³ Id = {provinceId}.")
+            });
+        }
+        var ward = await _wardRepo.GetByIdAsync(wardId!.Value);
+        if (ward == null)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(wardId),
+                    $"KhÃ´ng tÃ¬m tháº¥y phÆ°á»ng/xÃ£ cÃ³ Id = {wardId}.")
+            });
+        }
+        if (ward.WardPid != provinceId!.Value)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(wardId),
+                    $"PhÆ°á»ng/xÃ£ Id = {wardId} khÃ´ng thuá»™c tá»‰nh Id = {provinceId}.")
+            });
+        }
+        return ward.WardId;
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyNews\DeleteManyNewsUseCase.cs =====
+
+using Application.Requests.XuLyNews;
+using Domain.repositories;
+using FluentValidation;
+using FluentValidation.Results;
+using MediatR;
+
+namespace Application.Usecase.XuLyNews;
+
+public class DeleteManyNewsUseCase : IRequestHandler<DeleteManyNewsRequest, int>
+{
+    private readonly INewsRepo newsRepo;
+    private readonly IUnitOfWork _uow;
+    public DeleteManyNewsUseCase(INewsRepo newsRepo,IUnitOfWork uow)
+    {
+        newsRepo = newsRepo;
+        _uow = uow;
+    }
+
+    public async Task<int> Handle( DeleteManyNewsRequest request,CancellationToken cancellationToken)
+    {
+        await _uow.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var ids = request.Ids
+                .Distinct()
+                .ToList();
+            var deletedCount =
+                await newsRepo.SoftDeleteManyAsync(ids);
+            if (deletedCount != ids.Count)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        nameof(request.Ids),
+                        "CÃ³ News khÃ´ng tá»“n táº¡i hoáº·c Ä‘Ã£ bá»‹ xÃ³a."
+                    )
+                });
+            }
+            await _uow.CommitAsync(cancellationToken);
+            return deletedCount;
+        }
+        catch
+        {
+            await _uow.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyNews\DeleteNewsUseCase.cs =====
+
+using Application.Requests.XuLyNews;
+using Domain.entity;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.Usecase.XuLyNews
+{
+    public class DeleteNewsUseCase : IRequestHandler<DeleteNewsRequest, bool>
+    {
+        private readonly INewsRepo newsRepo;
+                private readonly IUnitOfWork _uow;
+        public DeleteNewsUseCase(INewsRepo newsRepo, IUnitOfWork uow)
+        {
+            newsRepo = newsRepo;
+            _uow = uow;
+        }
+        public async Task<bool> Handle(DeleteNewsRequest request, CancellationToken cancellationToken)
+        {
+            var news = await newsRepo.GetByIdAsync(request.id);
+            if (news == null)
+                return false;
+
+            await newsRepo.DeleteAsync(request.id);
+            await _uow.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyNews\GetAllNewsUseCase.cs =====
+
+using System.Runtime.CompilerServices;
+using Application.DTO;
+using Application.Mappers;
+using Application.XuLyNews.Requests;
+using Domain.entity;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.XuLyNews.UsesCases
+{
+    
+    public class GetAllNewsUseCase : IRequestHandler<GetAllNewsRequest, IAsyncEnumerable<NewsResponseDto>>
+    {
+        private readonly INewsRepo newsRepo;
+
+        public GetAllNewsUseCase(INewsRepo newsRepo)
+        {
+            newsRepo = newsRepo;
+        }
+
+        public async Task<IAsyncEnumerable<NewsResponseDto>> Handle(GetAllNewsRequest request, CancellationToken cancellationToken)
+        {
+                return StreamNews(cancellationToken);
+        }
+        private async IAsyncEnumerable<NewsResponseDto> StreamNews([EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await foreach (var n in newsRepo.GetAllWithMenusAsync().WithCancellation(cancellationToken))
+            {
+                var dto = n.ToDto();
+                    dto.Menus = n.Menu
+                        .Where(m => !m.IsDeleted)
+                        .Select(m => new MenuBasicResponseDto
+                        {
+                            Id   = m.Id,
+                            Name = m.Name ?? string.Empty,
+                            Slug = m.Slug ?? string.Empty
+                        });
+                    yield return dto;
+            }
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyNews\GetNewsByIdUseCase.cs =====
+
+using Application.DTO;
+using Application.Mappers;
+using Application.Requests.XuLyNews;
+using Domain.entity;
+using Domain.repositories;
+using MediatR;
+
+namespace Application.Usecase.XuLyNews
+{
+    public class GetNewsByIdUseCase : IRequestHandler<GetNewsByIdRequest, NewsResponseDto?>
+    {
+        private readonly INewsRepo newsRepo;
+        public GetNewsByIdUseCase(INewsRepo newsRepo)
+        {
+            newsRepo = newsRepo;
+        }
+        public async Task<NewsResponseDto?> Handle(GetNewsByIdRequest request,CancellationToken cancellationToken)
+        {
+            var n = await newsRepo.GetByIdWithMenusAsync(request.id);
+            if (n == null) return null;
+                var dto = n.ToDto();
+                    dto.Menus = n.Menu
+                        .Where(m => !m.IsDeleted)
+                        .Select(m => new MenuBasicResponseDto
+                        {
+                            Id   = m.Id,
+                            Name = m.Name ?? string.Empty,
+                            Slug = m.Slug ?? string.Empty
+                        });
+                    return dto;
+         
+        }
+}
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Usecase\XuLyNews\UpdateNewsUseCase.cs =====
+
+using Domain.entity;
+using Domain.repositories;
+using FluentValidation;
+using FluentValidation.Results;
+using MediatR;
+
+namespace Application.Requests.XuLyNews;
+
+public class UpdateNewsUseCase
+    : IRequestHandler<UpdateNewsRequest, bool>
+{
+    private readonly INewsRepo newsRepo;
+    private readonly IMenuRepo menuRepo;
+    private readonly IMenuNewsRepo _menuNewsRepo;
+    private readonly IWebsiteLocalizationWardRepo _wardRepo;
+    private readonly IUnitOfWork _uow;
+
+    public UpdateNewsUseCase(
+        INewsRepo newsRepo,
+        IMenuRepo menuRepo,
+        IMenuNewsRepo menuNewsRepo,
+        IWebsiteLocalizationWardRepo wardRepo,
+        IUnitOfWork uow)
+    {
+        newsRepo     = newsRepo;
+        menuRepo     = menuRepo;
+        _menuNewsRepo = menuNewsRepo;
+        _wardRepo     = wardRepo;
+        _uow          = uow;
+    }
+
+    public async Task<bool> Handle(UpdateNewsRequest request, CancellationToken cancellationToken)
+    {
+        await _uow.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var normalizedNewsSlug = request.slug.Trim().ToLowerInvariant();
+
+            var duplicateNews = await newsRepo.GetBySlugAsync(normalizedNewsSlug);
+            if (duplicateNews != null && duplicateNews.Id != request.id)
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(
+                        nameof(request.slug),
+                        $"Slug News '{request.slug}' Ä‘Ã£ tá»“n táº¡i."
+                    )
+                });
+            }
+
+            var news = await newsRepo.GetByIdAsync(request.id);
+            if (news == null)
+            {
+                await _uow.RollbackAsync(cancellationToken);
+                return false;
+            }
+
+            // Äá»•i sang nháº­n ProvinceId / WardId (int?)
+            var wardId = await ResolveWardIdAsync(
+                request.ProvinceId,
+                request.WardId,
+                request.Address);
+
+            news.Title     = request.title?.Trim();
+            news.Slug      = normalizedNewsSlug;
+            news.Content   = request.content;
+            news.Thumbnail = string.IsNullOrWhiteSpace(request.Thumbnail)
+                ? null
+                : request.Thumbnail.Trim();
+            news.Address = string.IsNullOrWhiteSpace(request.Address)
+                ? null
+                : request.Address.Trim();
+            news.WardId     = wardId;
+            news.UpdatedAt = DateTime.UtcNow;
+            await newsRepo.UpdateAsync(news);
+            var requestedMenuIds = new List<int>();
+            foreach (var item in request.DanhSachMenus)
+            {
+                var normalizedMenuSlug = item.Slug.Trim().ToLowerInvariant();
+                Menu? menu;
+
+                if (item.Id.HasValue)
+                {
+                    menu = await menuRepo.GetByIdAsync(item.Id.Value);
+                    if (menu == null)
+                    {
+                        throw new ValidationException(new[]
+                        {
+                            new ValidationFailure(
+                                nameof(item.Id),
+                                $"KhÃ´ng tÃ¬m tháº¥y Menu Id = {item.Id.Value}."
+                            )
+                        });
+                    }
+
+                    var duplicateMenu = await menuRepo.GetBySlugAsync(normalizedMenuSlug);
+                    if (duplicateMenu != null && duplicateMenu.Id != menu.Id)
+                    {
+                        throw new ValidationException(new[]
+                        {
+                            new ValidationFailure(
+                                nameof(item.Slug),
+                                $"Slug Menu '{item.Slug}' Ä‘Ã£ tá»“n táº¡i."
+                            )
+                        });
+                    }
+
+                    menu.Name       = item.Name.Trim();
+                    menu.Slug       = normalizedMenuSlug;
+                    menu.UpdatedAt = DateTime.UtcNow;
+                    await menuRepo.UpdateAsync(menu);
+                }
+                else
+                {
+                    var existingMenu = await menuRepo.GetBySlugAsync(normalizedMenuSlug);
+                    if (existingMenu != null)
+                    {
+                        if (!string.Equals(
+                                existingMenu.Name?.Trim(),
+                                item.Name.Trim(),
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            throw new ValidationException(new[]
+                            {
+                                new ValidationFailure(
+                                    nameof(item.Slug),
+                                    $"Slug Menu '{item.Slug}' Ä‘Ã£ tá»“n táº¡i vá»›i tÃªn khÃ¡c."
+                                )
+                            });
+                        }
+                        menu = existingMenu;
+                    }
+                    else
+                    {
+                        menu = new Menu
+                        {
+                            Name       = item.Name.Trim(),
+                            Slug       = normalizedMenuSlug,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        };
+                        await menuRepo.AddAsync(menu);
+                        await _uow.SaveChangesAsync(cancellationToken);
+                    }
+                }
+
+                if (!requestedMenuIds.Contains(menu.Id))
+                {
+                    requestedMenuIds.Add(menu.Id);
+                }
+            }
+
+            var currentMenuIds  = await _menuNewsRepo.GetMenuIdsByNewsIdAsync(news.Id, cancellationToken);
+            var menuIdsToRemove = currentMenuIds.Except(requestedMenuIds).ToList();
+            var menuIdsToAdd    = requestedMenuIds.Except(currentMenuIds).ToList();
+
+            await _menuNewsRepo.RemoveByNewsAndMenuIdsAsync(news.Id, menuIdsToRemove, cancellationToken);
+
+            foreach (var menuId in menuIdsToAdd)
+            {
+                await _menuNewsRepo.AddAsync(new MenuNews
+                {
+                    MenuId = menuId,
+                    NewsId = news.Id
+                });
+            }
+
+            await _uow.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await _uow.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    // Äá»•i signature: nháº­n int? thay vÃ¬ string?
+    private async Task<int?> ResolveWardIdAsync(int? provinceId, int? wardId, string? address)
+    {
+        var hasProvince = provinceId.HasValue;
+        var hasWard     = wardId.HasValue;
+        var hasAddress  = !string.IsNullOrWhiteSpace(address);
+
+        if (!hasProvince && !hasWard && !hasAddress)
+            return null;
+
+        if (!hasProvince || !hasWard || !hasAddress)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    "Address",
+                    "Pháº£i nháº­p Ä‘áº§y Ä‘á»§ tá»‰nh/thÃ nh phá»‘, phÆ°á»ng/xÃ£ vÃ  Ä‘á»‹a chá»‰.")
+            });
+        }
+
+        var province = await _wardRepo.GetByIdAsync(provinceId!.Value);
+        if (province == null || province.WardPid != 0)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(provinceId),
+                    $"KhÃ´ng tÃ¬m tháº¥y tá»‰nh/thÃ nh phá»‘ cÃ³ Id = {provinceId}.")
+            });
+        }
+
+        var ward = await _wardRepo.GetByIdAsync(wardId!.Value);
+        if (ward == null)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(wardId),
+                    $"KhÃ´ng tÃ¬m tháº¥y phÆ°á»ng/xÃ£ cÃ³ Id = {wardId}.")
+            });
+        }
+
+        if (ward.WardPid != provinceId!.Value)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(
+                    nameof(wardId),
+                    $"PhÆ°á»ng/xÃ£ Id = {wardId} khÃ´ng thuá»™c tá»‰nh Id = {provinceId}.")
+            });
+        }
+
+        return ward.WardId;
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenu\CreateMenuRequestValidator.cs =====
+
+using Application.Requests.XuLyMenu;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenu;
+
+public class CreateMenuRequestValidator : AbstractValidator<CreateMenuRequest>
+{
+    public CreateMenuRequestValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("TÃªn menu khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("TÃªn menu tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Slug)
+            .NotEmpty().WithMessage("Slug menu khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Slug menu tá»‘i Ä‘a 255 kÃ½ tá»±.")
+            .Matches("^[a-zA-Z0-9-_]+$")
+            .WithMessage("Slug menu chá»‰ Ä‘Æ°á»£c chá»©a chá»¯, sá»‘, dáº¥u gáº¡ch ngang hoáº·c gáº¡ch dÆ°á»›i.");
+
+        RuleFor(x => x.DanhSachNews)
+            .NotNull().WithMessage("Danh sÃ¡ch news khÃ´ng Ä‘Æ°á»£c null.");
+
+        RuleForEach(x => x.DanhSachNews)
+            .SetValidator(new NewsInputRequestValidator());
+
+        RuleFor(x => x.DanhSachNews)
+            .Must(list =>
+            {
+                var slugs = list
+                    .Select(x => x.Slug.Trim().ToLower())
+                    .ToList();
+                return slugs.Count == slugs.Distinct().Count();
+            })
+            .WithMessage("Danh sÃ¡ch News khÃ´ng Ä‘Æ°á»£c trÃ¹ng Slug.")
+            .When(x => x.DanhSachNews != null && x.DanhSachNews.Any());
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenu\DeleteManyMenuRequestValidator.cs =====
+
+using Application.Requests.XuLyMenu;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenu;
+
+public class DeleteManyMenuRequestValidator
+    : AbstractValidator<DeleteManyMenuRequest>
+{
+    public DeleteManyMenuRequestValidator()
+    {
+        RuleFor(x => x.Ids)
+            .NotNull()
+            .NotEmpty()
+            .WithMessage("Danh sÃ¡ch Id khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+
+        RuleForEach(x => x.Ids)
+            .GreaterThan(0)
+            .WithMessage("Id Menu pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.Ids)
+            .Must(ids => ids.Distinct().Count() == ids.Count)
+            .WithMessage("Danh sÃ¡ch Id khÃ´ng Ä‘Æ°á»£c trÃ¹ng nhau.")
+            .When(x => x.Ids != null);
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenu\DeleteMenuRequestValidator.cs =====
+
+using Application.Requests.XuLyMenu;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenu;
+
+public class DeleteMenuRequestValidator : AbstractValidator<DeleteMenuRequest>
+{
+    public DeleteMenuRequestValidator()
+    {
+        RuleFor(x => x.Id)
+            .GreaterThan(0).WithMessage("Id menu khÃ´ng há»£p lá»‡.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenu\NewsInputRequestValidator.cs =====
+
+using Application.Requests.XuLyMenu;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenu;
+
+public class NewsInputRequestValidator : AbstractValidator<NewsInputRequest>
+{
+    public NewsInputRequestValidator()
+    {
+        RuleFor(x => x.Title)
+            .NotEmpty().WithMessage("Title khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Title tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Slug)
+            .NotEmpty().WithMessage("Slug khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Slug tá»‘i Ä‘a 255 kÃ½ tá»±.")
+            .Matches("^[a-zA-Z0-9-_]+$")
+            .WithMessage("Slug chá»‰ Ä‘Æ°á»£c chá»©a chá»¯, sá»‘, dáº¥u gáº¡ch ngang hoáº·c gáº¡ch dÆ°á»›i.");
+
+        RuleFor(x => x.Content)
+            .NotEmpty().WithMessage("Content khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+
+        RuleFor(x => x.Thumbnail)
+            .MaximumLength(255).WithMessage("Thumbnail tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Address)
+            .MaximumLength(255).WithMessage("Äá»‹a chá»‰ tá»‘i Ä‘a 255 kÃ½ tá»±.");
+        RuleFor(x => x.ProvinceId)
+            .GreaterThan(0)
+            .When(x => x.ProvinceId.HasValue)
+            .WithMessage("ProvinceId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.WardId)
+            .GreaterThan(0)
+            .When(x => x.WardId.HasValue)
+            .WithMessage("WardId pháº£i lá»›n hÆ¡n 0.");
+        RuleFor(x => x)
+            .Must(x =>
+            {
+                var allEmpty  = !x.ProvinceId.HasValue
+                             && !x.WardId.HasValue
+                             && string.IsNullOrWhiteSpace(x.Address);
+
+                var allFilled = x.ProvinceId.HasValue
+                             && x.WardId.HasValue
+                             && !string.IsNullOrWhiteSpace(x.Address);
+
+                return allEmpty || allFilled;
+            })
+            .WithMessage("Pháº£i nháº­p Ä‘áº§y Ä‘á»§ tá»‰nh, phÆ°á»ng/xÃ£ vÃ  Ä‘á»‹a chá»‰ hoáº·c Ä‘á»ƒ trá»‘ng cáº£ 3.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenu\UpdateMenuNewsItemRequestValidator.cs =====
+
+    using Application.Requests.XuLyMenu;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenu;
+public class UpdateMenuNewsItemRequestValidator : AbstractValidator<UpdateMenuNewsItemRequest>
+{
+    public UpdateMenuNewsItemRequestValidator()
+    {
+        RuleFor(x => x.Id)
+            .GreaterThan(0)
+            .When(x => x.Id.HasValue)
+            .WithMessage("Id News pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.Title)
+            .NotEmpty().WithMessage("TiÃªu Ä‘á» News khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("TiÃªu Ä‘á» News tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Slug)
+            .NotEmpty().WithMessage("Slug News khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Slug News tá»‘i Ä‘a 255 kÃ½ tá»±.")
+            .Matches("^[a-zA-Z0-9-_]+$")
+            .WithMessage("Slug chá»‰ Ä‘Æ°á»£c chá»©a chá»¯, sá»‘, gáº¡ch ngang hoáº·c gáº¡ch dÆ°á»›i.");
+
+        RuleFor(x => x.Content)
+            .NotEmpty().WithMessage("Ná»™i dung News khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+
+        RuleFor(x => x.Thumbnail)
+            .MaximumLength(255).WithMessage("Thumbnail tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Address)
+            .MaximumLength(255).WithMessage("Äá»‹a chá»‰ tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.ProvinceId)
+            .GreaterThan(0)
+            .When(x => x.ProvinceId.HasValue)
+            .WithMessage("ProvinceId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.WardId)
+            .GreaterThan(0)
+            .When(x => x.WardId.HasValue)
+            .WithMessage("WardId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x)
+            .Must(x =>
+            {
+                var allEmpty  = !x.ProvinceId.HasValue && !x.WardId.HasValue && string.IsNullOrWhiteSpace(x.Address);
+                var allFilled = x.ProvinceId.HasValue  && x.WardId.HasValue  && !string.IsNullOrWhiteSpace(x.Address);
+                return allEmpty || allFilled;
+            })
+            .WithMessage("Pháº£i nháº­p Ä‘áº§y Ä‘á»§ tá»‰nh/thÃ nh phá»‘, phÆ°á»ng/xÃ£ vÃ  Ä‘á»‹a chá»‰ hoáº·c Ä‘á»ƒ trá»‘ng cáº£ 3.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenu\UpdateMenuRequestValidator.cs =====
+
+using Application.Requests.XuLyMenu;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenu;
+
+public class UpdateMenuRequestValidator : AbstractValidator<UpdateMenuRequest>
+{
+    public UpdateMenuRequestValidator()
+    {
+        RuleFor(x => x.Id)
+            .GreaterThan(0).WithMessage("Id menu khÃ´ng há»£p lá»‡.");
+
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("TÃªn menu khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("TÃªn menu tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Slug)
+            .NotEmpty().WithMessage("Slug menu khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Slug menu tá»‘i Ä‘a 255 kÃ½ tá»±.")
+            .Matches("^[a-zA-Z0-9-_]+$")
+            .WithMessage("Slug menu chá»‰ Ä‘Æ°á»£c chá»©a chá»¯, sá»‘, dáº¥u gáº¡ch ngang hoáº·c gáº¡ch dÆ°á»›i.");
+        RuleFor(x => x.DanhSachNews)
+                .NotNull()
+                .WithMessage("Danh sÃ¡ch News khÃ´ng Ä‘Æ°á»£c null.");
+
+        RuleForEach(x => x.DanhSachNews)
+                .SetValidator(new UpdateMenuNewsItemRequestValidator());
+
+        RuleFor(x => x.DanhSachNews)
+                .Must(items =>
+                {
+                    var slugs = items
+                        .Select(x => x.Slug.Trim().ToLowerInvariant())
+                        .ToList();
+
+                    return slugs.Count == slugs.Distinct().Count();
+                })
+                .When(x => x.DanhSachNews != null)
+                .WithMessage("Danh sÃ¡ch News khÃ´ng Ä‘Æ°á»£c trÃ¹ng slug.");      
+                }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenuNews\CreateMenuNewsRequestValidator.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenuNews;
+
+public class CreateMenuNewsRequestValidator
+    : AbstractValidator<CreateMenuNewsRequest>
+{
+    public CreateMenuNewsRequestValidator()
+    {
+        RuleFor(x => x.MenuId)
+            .GreaterThan(0)
+            .WithMessage("MenuId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.NewsId)
+            .GreaterThan(0)
+            .WithMessage("NewsId pháº£i lá»›n hÆ¡n 0.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenuNews\DeleteMenuNewsRequest.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenuNews;
+public class DeleteMenuNewsRequestValidator
+    : AbstractValidator<DeleteMenuNewsRequest>
+{
+    public DeleteMenuNewsRequestValidator()
+    {
+        RuleFor(x => x.MenuId)
+            .GreaterThan(0)
+            .WithMessage("MenuId khÃ´ng há»£p lá»‡.");
+
+        RuleFor(x => x.NewsId)
+            .GreaterThan(0)
+            .WithMessage("NewsId khÃ´ng há»£p lá»‡.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenuNews\GetMenuNewsByIdRequestValidator.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenuNews;
+
+public class GetMenuNewsByIdRequestValidator
+    : AbstractValidator<GetMenuNewsByIdRequest>
+{
+    public GetMenuNewsByIdRequestValidator()
+    {
+        RuleFor(x => x.MenuId)
+            .GreaterThan(0)
+            .WithMessage("MenuId khÃ´ng há»£p lá»‡.");
+
+        RuleFor(x => x.NewsId)
+            .GreaterThan(0)
+            .WithMessage("NewsId khÃ´ng há»£p lá»‡.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenuNews\SearchMenuNewsRequestValidator.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenuNews;
+public class SearchMenuNewsRequestValidator
+    : AbstractValidator<SearchMenuNewsRequest>
+{
+    public SearchMenuNewsRequestValidator()
+    {
+        RuleFor(x => x.MenuId)
+            .GreaterThan(0)
+            .When(x => x.MenuId.HasValue)
+            .WithMessage("MenuId khÃ´ng há»£p lá»‡.");
+
+        RuleFor(x => x.NewsId)
+            .GreaterThan(0)
+            .When(x => x.NewsId.HasValue)
+            .WithMessage("NewsId khÃ´ng há»£p lá»‡.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XuLyMenuNews\UpdateMenuNewsRequestValidator.cs =====
+
+using Application.Requests.XuLyMenuNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyMenuNews;
+
+public class UpdateMenuNewsRequestValidator
+    : AbstractValidator<UpdateMenuNewsRequest>
+{
+    public UpdateMenuNewsRequestValidator()
+    {
+        RuleFor(x => x.OldMenuId)
+            .GreaterThan(0)
+            .WithMessage("OldMenuId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.OldNewsId)
+            .GreaterThan(0)
+            .WithMessage("OldNewsId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.MenuId)
+            .GreaterThan(0)
+            .WithMessage("MenuId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.NewsId)
+            .GreaterThan(0)
+            .WithMessage("NewsId pháº£i lá»›n hÆ¡n 0.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XyLyNews\CreateNewsRequestValidator.cs =====
+
+using Application.Requests.XuLyNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyNews;
+
+public class CreateNewsRequestValidator : AbstractValidator<CreateNewsRequest>
+{
+    public CreateNewsRequestValidator()
+    {
+        RuleFor(x => x.Title)
+            .NotEmpty().WithMessage("Title khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Title tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Slug)
+            .NotEmpty().WithMessage("Slug khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Slug tá»‘i Ä‘a 255 kÃ½ tá»±.")
+            .Matches("^[a-zA-Z0-9-_]+$")
+            .WithMessage("Slug chá»‰ Ä‘Æ°á»£c chá»©a chá»¯, sá»‘, dáº¥u gáº¡ch ngang hoáº·c gáº¡ch dÆ°á»›i.");
+
+        RuleFor(x => x.Content)
+            .NotEmpty().WithMessage("Content khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+
+        RuleFor(x => x.Thumbnail)
+            .MaximumLength(255).WithMessage("Thumbnail tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Address)
+            .MaximumLength(255).WithMessage("Äá»‹a chá»‰ tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.ProvinceId)
+            .GreaterThan(0)
+            .When(x => x.ProvinceId.HasValue)
+            .WithMessage("ProvinceId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.WardId)
+            .GreaterThan(0)
+            .When(x => x.WardId.HasValue)
+            .WithMessage("WardId pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x)
+            .Must(x =>
+            {
+                var allEmpty  = !x.ProvinceId.HasValue
+                             && !x.WardId.HasValue
+                             && string.IsNullOrWhiteSpace(x.Address);
+
+                var allFilled = x.ProvinceId.HasValue
+                             && x.WardId.HasValue
+                             && !string.IsNullOrWhiteSpace(x.Address);
+
+                return allEmpty || allFilled;
+            })
+            .WithMessage("Pháº£i nháº­p Ä‘áº§y Ä‘á»§ tá»‰nh, phÆ°á»ng/xÃ£ vÃ  Ä‘á»‹a chá»‰ hoáº·c Ä‘á»ƒ trá»‘ng cáº£ 3.");
+
+        RuleFor(x => x.DanhSachMenus)
+            .NotNull().WithMessage("Danh sÃ¡ch menu khÃ´ng Ä‘Æ°á»£c null.");
+
+        RuleForEach(x => x.DanhSachMenus)
+            .SetValidator(new MenuInputRequestValidator());
+
+        RuleFor(x => x.DanhSachMenus)
+            .Must(list =>
+            {
+                var slugs = list
+                    .Select(x => x.Slug.Trim().ToLower())
+                    .ToList();
+                return slugs.Count == slugs.Distinct().Count();
+            })
+            .WithMessage("Danh sÃ¡ch Menu khÃ´ng Ä‘Æ°á»£c trÃ¹ng Slug.")
+            .When(x => x.DanhSachMenus != null && x.DanhSachMenus.Any());
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XyLyNews\DeleteManyNewsRequestValidator.cs =====
+
+using Application.Requests.XuLyNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyNews;
+
+public class DeleteManyNewsRequestValidator: AbstractValidator<DeleteManyNewsRequest>
+{
+    public DeleteManyNewsRequestValidator()
+    {
+        RuleFor(x => x.Ids)
+            .NotNull()
+            .NotEmpty()
+            .WithMessage("Danh sÃ¡ch Id News khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+
+        RuleForEach(x => x.Ids)
+            .GreaterThan(0)
+            .WithMessage("Id News pháº£i lá»›n hÆ¡n 0.");
+
+        RuleFor(x => x.Ids)
+            .Must(ids =>
+                ids.Distinct().Count() == ids.Count)
+            .WithMessage(
+                "Danh sÃ¡ch Id News khÃ´ng Ä‘Æ°á»£c trÃ¹ng nhau.")
+            .When(x => x.Ids != null);
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XyLyNews\DeleteNewsRequestValidator.cs =====
+
+using Application.Requests.XuLyNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyNews;
+
+public class DeleteNewsRequestValidator : AbstractValidator<DeleteNewsRequest>
+{
+    public DeleteNewsRequestValidator()
+    {
+        RuleFor(x => x.id)
+            .GreaterThan(0).WithMessage("Id news khÃ´ng há»£p lá»‡.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XyLyNews\MenuInputRequestValidator.cs =====
+
+using Application.Requests.XuLyNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyNews;
+
+public class MenuInputRequestValidator : AbstractValidator<MenuInputRequest>
+{
+    public MenuInputRequestValidator()
+    {
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("TÃªn menu khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("TÃªn menu tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.Slug)
+            .NotEmpty().WithMessage("Slug menu khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Slug menu tá»‘i Ä‘a 255 kÃ½ tá»±.")
+            .Matches("^[a-zA-Z0-9-_]+$")
+            .WithMessage("Slug menu chá»‰ Ä‘Æ°á»£c chá»©a chá»¯, sá»‘, dáº¥u gáº¡ch ngang hoáº·c gáº¡ch dÆ°á»›i.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Application\Validators\XyLyNews\UpdateNewsRequestValidator.cs =====
+
+using Application.Requests.XuLyNews;
+using FluentValidation;
+
+namespace Application.Validators.XuLyNews;
+
+public class UpdateNewsRequestValidator : AbstractValidator<UpdateNewsRequest>
+{
+    public UpdateNewsRequestValidator()
+    {
+        RuleFor(x => x.id)
+            .GreaterThan(0).WithMessage("Id news khÃ´ng há»£p lá»‡.");
+
+        RuleFor(x => x.title)
+            .NotEmpty().WithMessage("Title khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Title tá»‘i Ä‘a 255 kÃ½ tá»±.");
+
+        RuleFor(x => x.slug)
+            .NotEmpty().WithMessage("Slug khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.")
+            .MaximumLength(255).WithMessage("Slug tá»‘i Ä‘a 255 kÃ½ tá»±.")
+            .Matches("^[a-zA-Z0-9-_]+$")
+            .WithMessage("Slug chá»‰ Ä‘Æ°á»£c chá»©a chá»¯, sá»‘, dáº¥u gáº¡ch ngang hoáº·c gáº¡ch dÆ°á»›i.");
+
+        RuleFor(x => x.content)
+            .NotEmpty().WithMessage("Content khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
+
+        RuleFor(x => x.Thumbnail)
+            .MaximumLength(255).WithMessage("Thumbnail tá»‘i Ä‘a 255 kÃ½ tá»±.");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\entity\BaseId.cs =====
+
+namespace Domain.entity
+{
+    public abstract class BaseId
+    {
+        public int Id { get; set; }
+        public bool IsDeleted { get; set; } = false;
+        public DateTime ? CreatedAt { get; set; }
+        public DateTime ? UpdatedAt { get; set; }
+        public DateTime ? DateledAt { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\entity\Menu.cs =====
+
+namespace Domain.entity
+{
+    public class Menu : BaseId
+    {
+        public string ? Name { get; set; }
+        public string ? Slug { get; set; }
+
+        public ICollection<News> News { get; set; } = new List<News>();
+
+
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\entity\MenuNews.cs =====
+
+namespace Domain.entity
+{
+    public class MenuNews
+    {
+        public int MenuId { get; set; }
+        public int NewsId { get; set; }
+
+        public Menu? Menu { get; set; }
+        public News? News { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\entity\News.cs =====
+
+namespace Domain.entity
+{
+    public class News : BaseId
+    {
+        public string ? Title { get; set; }
+        public string ? Slug { get; set; }
+        public string ? Content { get; set; }
+        public string ? Thumbnail { get; set; }
+        public ICollection<Menu> Menu { get; set; } = new List<Menu>();
+        public string? Address { get; set; }
+            public int? WardId { get; set; }
+        public WebsiteLocalizationWard? Ward { get; set; }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\entity\WebsiteLocalization.cs =====
+
+namespace Domain.entity;
+
+public class WebsiteLocalization
+{
+    public string KeyLocalization { get; set; } = null!;
+
+    public string Localization { get; set; } = null!;
+
+    public bool IsActived { get; set; }
+
+    public ICollection<WebsiteLocalizationWard> Wards { get; set; }
+        = new List<WebsiteLocalizationWard>();
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\entity\WebsiteLocalizationWard.cs =====
+
+namespace Domain.entity;
+
+public class WebsiteLocalizationWard
+{
+    public int WardId { get; set; }
+
+    public int WardPid { get; set; }
+
+    public string Name { get; set; } = null!;
+
+    public string? NameEn { get; set; }
+
+    public string FullName { get; set; } = null!;
+
+    public string? FullNameEn { get; set; }
+
+    public string KeyLocalization { get; set; } = null!;
+
+    public bool IsActived { get; set; }
+
+    public WebsiteLocalization? Localization { get; set; }
+
+    public ICollection<News> News { get; set; }
+        = new List<News>();
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\obj\Debug\net10.0\.NETCoreApp,Version=v10.0.AssemblyAttributes.cs =====
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v10.0", FrameworkDisplayName = ".NET 10.0")]
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\obj\Debug\net10.0\Domain.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Domain")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyProductAttribute("Domain")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Domain")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\obj\Debug\net10.0\Domain.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs =====
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\obj\Debug\net8.0\Domain.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Domain")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f189dd4bdfd0f7ab0d556c412c45d0456fc2dd0b")]
+[assembly: System.Reflection.AssemblyProductAttribute("Domain")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Domain")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\obj\Debug\net8.0\Domain.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\repositories\IMenuNewsRepo.cs =====
+
+using Domain.entity;
+
+namespace Domain.repositories
+{
+    public interface IMenuNewsRepo
+    {
+        Task<IEnumerable<MenuNews>> GetAllAsync();
+        Task<IEnumerable<MenuNews>> SearchAsync(int? menuId, int? newsId);
+        Task<MenuNews?> GetByIdAsync(int menuId, int newsId);
+        Task AddAsync(MenuNews menuNews);
+        Task UpdateAsync(MenuNews menuNews);
+        Task DeleteAsync(int menuId, int newsId);
+        Task<bool> ExistsAsync(int menuId, int newsId);
+        Task<List<int>> GetNewsIdsByMenuIdAsync(int menuId,CancellationToken cancellationToken = default);
+        Task RemoveByMenuAndNewsIdsAsync(int menuId,IEnumerable<int> newsIds,CancellationToken cancellationToken = default);
+        Task<List<int>> GetMenuIdsByNewsIdAsync(int newsId,CancellationToken cancellationToken = default);
+        Task RemoveByNewsAndMenuIdsAsync(int newsId,IEnumerable<int> menuIds,CancellationToken cancellationToken = default);
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\repositories\IMenuRepo.cs =====
+
+using Domain.entity;
+
+namespace Domain.repositories
+{
+    public interface IMenuRepo : IRepository<Menu>
+    {
+        Task<Menu?> GetBySlugAsync(string slug); 
+        Task<Menu?> GetByIdWithNewsAsync(int id);
+        IEnumerable<Menu> GetAllWithNewsAsync();  
+
+
+    }   
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\repositories\INewsRepo.cs =====
+
+using Domain.entity;
+
+namespace Domain.repositories
+{
+    public interface INewsRepo : IRepository<News>
+    {
+        Task<News?> GetBySlugAsync(string slug);
+        
+        Task<News?> GetByIdWithMenusAsync(int id);
+        IEnumerable<News> GetAllWithMenusAsync();
+
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\repositories\IRepositoryPage.cs =====
+
+using Domain.entity;
+
+namespace Domain.repositories;
+public interface IRepository<T> where T : BaseId
+{
+    Task<IEnumerable<T>> GetAllAsync();
+    Task<T?> GetByIdAsync(int id);
+    Task<T> AddAsync(T entity);
+    Task UpdateAsync(T entity);
+    Task DeleteAsync(int id);
+    Task SoftDelete(int id);
+     Task<bool> ExistsAsync(int id);
+     Task<int> SoftDeleteManyAsync(IEnumerable<int> ids);
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\repositories\IUnitOfWork.cs =====
+
+namespace Domain.repositories;
+
+public interface IUnitOfWork : IDisposable
+{
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+    Task CommitAsync(CancellationToken cancellationToken = default);
+    Task RollbackAsync(CancellationToken cancellationToken = default);
+    
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Domain\repositories\IWebsiteLocalizationWardRepo.cs =====
+
+using Domain.entity;
+
+namespace Domain.repositories;
+
+public interface IWebsiteLocalizationWardRepo
+{
+    Task<WebsiteLocalizationWard?> GetByIdAsync(int wardId);
+    Task<IEnumerable<WebsiteLocalizationWard>> GetProvincesAsync();
+    Task<IEnumerable<WebsiteLocalizationWard>>GetWardsByProvinceIdAsync(int provinceId);
+    Task<WebsiteLocalizationWard?> GetProvinceByNameAsync(string provinceName);
+    Task<WebsiteLocalizationWard?> GetWardByNameAndProvinceAsync(string wardName,int provinceId);
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Configuration\MenuConFig.cs =====
+
+using Domain.entity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Infrastructure.Configuration
+{
+    public class MenuConFig : IEntityTypeConfiguration<Menu>
+    {
+        public void Configure(EntityTypeBuilder<Menu> builder)
+        {
+            builder.ToTable("menus");
+            builder.HasKey(x => x.Id);
+            builder.Property(sv => sv.Id).HasColumnName("Menu_Id").ValueGeneratedOnAdd();
+            builder.Property(x => x.IsDeleted).HasColumnName("IsDeleted");
+            builder.HasIndex(x => x.Slug);
+            builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(255);
+            builder.Property(x => x.Slug).HasColumnName("slug").HasMaxLength(255);
+        }   
+    }
+
+    
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Configuration\MenuNewsConfig.cs =====
+
+using Domain.entity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Infrastructure.Configuration
+{
+    public class MenuNewsConfig : IEntityTypeConfiguration<Menu>
+    {
+        public void Configure(EntityTypeBuilder<Menu> builder)
+        {
+            builder.HasMany(menu => menu.News).WithMany(news => news.Menu).UsingEntity<MenuNews>(right => right.HasOne(x => x.News).WithMany().HasForeignKey(x => x.NewsId),
+                    left => left.HasOne(x => x.Menu).WithMany().HasForeignKey(x => x.MenuId),
+                    join =>
+                    {
+                        join.ToTable("Menu_News");
+                        join.HasKey(x => new { x.MenuId, x.NewsId });
+                        join.Property(x => x.MenuId).HasColumnName("Menu_Id");
+                        join.Property(x => x.NewsId).HasColumnName("News_Id");
+                    });
+        }
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Configuration\NewsConFig.cs =====
+
+using Domain.entity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Infrastructure.Configuration
+{
+    public class NewsConFig : IEntityTypeConfiguration<News>
+    {
+        public void Configure(EntityTypeBuilder<News> builder)
+        {
+            builder.ToTable("news");
+            builder.HasKey(x => x.Id);
+            builder.Property(sv => sv.Id).HasColumnName("News_Id").ValueGeneratedOnAdd();
+            builder.Property(x => x.IsDeleted).HasColumnName("IsDeleted");
+            builder.HasIndex(x => x.Slug);
+            builder.Property(x => x.Title).HasColumnName("title").HasMaxLength(255);
+            builder.Property(x => x.Slug).HasColumnName("slug").HasMaxLength(255);
+            builder.Property(x => x.Content).HasColumnName("content");
+            builder.Property(x => x.Thumbnail).HasColumnName("Thumbnail").HasMaxLength(255);
+            builder.Property(x => x.Address).HasColumnName("address").HasMaxLength(255);
+            builder.Property(x => x.WardId).HasColumnName("ward_id");
+            builder.HasOne(x => x.Ward).WithMany(x => x.News).HasForeignKey(x => x.WardId);
+            builder.HasIndex(x => x.WardId);
+        }   
+    }
+
+    
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Configuration\WebsiteLocalizationConfig.cs =====
+
+using Domain.entity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Infrastructure.Configuration;
+
+public class WebsiteLocalizationConfig
+    : IEntityTypeConfiguration<WebsiteLocalization>
+{
+    public void Configure(
+        EntityTypeBuilder<WebsiteLocalization> builder)
+    {
+        builder.ToTable("website_localization");
+        builder.HasKey(x => x.KeyLocalization);
+        builder.Property(x => x.KeyLocalization).HasColumnName("key_localization").HasMaxLength(32);
+        builder.Property(x => x.Localization).HasColumnName("localization").HasMaxLength(32);
+        builder.Property(x => x.IsActived).HasColumnName("is_actived");
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Configuration\WebsiteLocalizationWardConfig.cs =====
+
+using Domain.entity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Infrastructure.Configuration;
+
+public class WebsiteLocalizationWardConfig
+    : IEntityTypeConfiguration<WebsiteLocalizationWard>
+{
+    public void Configure(
+        EntityTypeBuilder<WebsiteLocalizationWard> builder)
+    {
+        builder.ToTable("website_localization_ward_v2");
+        builder.HasKey(x => x.WardId);
+        builder.Property(x => x.WardId).HasColumnName("ward_id").ValueGeneratedOnAdd();
+        builder.Property(x => x.WardPid).HasColumnName("ward_pid");
+        builder.Property(x => x.Name).HasColumnName("name").HasMaxLength(64);
+        builder.Property(x => x.NameEn).HasColumnName("name_en").HasMaxLength(64);
+        builder.Property(x => x.FullName).HasColumnName("full_name").HasMaxLength(96);
+        builder.Property(x => x.FullNameEn).HasColumnName("full_name_en").HasMaxLength(96);
+        builder.Property(x => x.KeyLocalization).HasColumnName("key_localization").HasMaxLength(32);
+        builder.Property(x => x.IsActived).HasColumnName("is_actived");
+        builder.HasOne(x => x.Localization).WithMany(x => x.Wards).HasForeignKey(x => x.KeyLocalization).HasPrincipalKey(x => x.KeyLocalization);
+        builder.HasIndex(x => x.WardPid);
+        builder.HasIndex(x => x.KeyLocalization);
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Data\AppDbContext.cs =====
+
+using Domain.entity;
+using Infrastructure.Configuration;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Data;
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+
+        public DbSet<Menu> Menus { get; set; }
+        public DbSet<News> News { get; set; }
+        public DbSet<MenuNews> MenuNews { get; set; }
+        public DbSet<WebsiteLocalization> WebsiteLocalizations { get; set; }
+
+        public DbSet<WebsiteLocalizationWard> WebsiteLocalizationWards { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyConfiguration(new MenuConFig());
+            modelBuilder.ApplyConfiguration(new NewsConFig());
+            modelBuilder.ApplyConfiguration(new MenuNewsConfig());
+            modelBuilder.ApplyConfiguration(new WebsiteLocalizationConfig());
+            modelBuilder.ApplyConfiguration(new WebsiteLocalizationWardConfig());
+
+        }
+
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net10.0\.NETCoreApp,Version=v10.0.AssemblyAttributes.cs =====
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v10.0", FrameworkDisplayName = ".NET 10.0")]
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net10.0\Infrastructure.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Infrastructure")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyProductAttribute("Infrastructure")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Infrastructure")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net10.0\Infrastructure.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net8.0\.NETCoreApp,Version=v8.0.AssemblyAttributes.cs =====
+
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net8.0\Infrastructure.AssemblyInfo.cs =====
+
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("Infrastructure")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f189dd4bdfd0f7ab0d556c412c45d0456fc2dd0b")]
+[assembly: System.Reflection.AssemblyProductAttribute("Infrastructure")]
+[assembly: System.Reflection.AssemblyTitleAttribute("Infrastructure")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Generated by the MSBuild WriteCodeFragment class.
+
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\obj\Debug\net8.0\Infrastructure.GlobalUsings.g.cs =====
+
+// <auto-generated/>
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Repository\MenuNewsRepository.cs =====
+
+using Domain.entity;
+using Domain.repositories;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Repository
+{
+    public class MenuNewsRepository : IMenuNewsRepo
+    {
+        private readonly AppDbContext context;
+
+        public MenuNewsRepository(AppDbContext db)
+        {
+            context = db;
+        }
+
+        public async Task<IEnumerable<MenuNews>> GetAllAsync()
+        {
+            return await Query().ToListAsync();
+        }
+
+        public async Task<IEnumerable<MenuNews>> SearchAsync(int? menuId, int? newsId)
+        {
+            var query = Query();
+            if (menuId.HasValue)
+            {
+                query = query.Where(x => x.MenuId == menuId.Value);
+            }
+            if (newsId.HasValue)
+            {
+                query = query.Where(x => x.NewsId == newsId.Value);
+            }
+            return await query.ToListAsync();
+        }
+
+        public async Task<MenuNews?> GetByIdAsync(int menuId, int newsId)
+        {
+            return await Query().FirstOrDefaultAsync(x => x.MenuId == menuId && x.NewsId == newsId);
+        }
+
+        public async Task AddAsync(MenuNews menuNews)
+        {
+            await context.MenuNews.AddAsync(menuNews);
+        }
+
+        public Task UpdateAsync(MenuNews menuNews)
+        {
+            context.MenuNews.Update(menuNews);
+            return Task.CompletedTask;
+        }
+
+        public async Task DeleteAsync(int menuId, int newsId)
+        {
+            var menuNews = await context.MenuNews
+                .FirstOrDefaultAsync(x => x.MenuId == menuId && x.NewsId == newsId);
+
+            if (menuNews != null)
+            {
+                context.MenuNews.Remove(menuNews);
+            }
+        }
+        public Task<bool> ExistsAsync(int menuId, int newsId)
+        {
+            return context.MenuNews.AnyAsync(x =>x.MenuId == menuId && x.NewsId == newsId);
+        }
+
+        private IQueryable<MenuNews> Query()
+        {
+            return context.MenuNews
+                .Where(x => x.Menu != null
+                    && x.News != null
+                    && x.Menu.IsDeleted == false
+                    && x.News.IsDeleted == false)
+                .Select(x => new MenuNews
+                {
+                    MenuId = x.MenuId,
+                    NewsId = x.NewsId,
+                    Menu = new Menu
+                    {
+                        Id = x.Menu!.Id,
+                        Name = x.Menu.Name,
+                        Slug = x.Menu.Slug,
+                        IsDeleted = x.Menu.IsDeleted,
+                        CreatedAt = x.Menu.CreatedAt,
+                        UpdatedAt = x.Menu.UpdatedAt,
+                        DateledAt = x.Menu.DateledAt
+                    },
+                    News = new News
+                    {
+                        Id = x.News!.Id,
+                        Title = x.News.Title,
+                        Slug = x.News.Slug,
+                        Content = x.News.Content,
+                        Thumbnail = x.News.Thumbnail,
+                        IsDeleted = x.News.IsDeleted,
+                        CreatedAt = x.News.CreatedAt,
+                        UpdatedAt = x.News.UpdatedAt,
+                        DateledAt = x.News.DateledAt
+                    }
+                });
+        }
+        public async Task<List<int>> GetNewsIdsByMenuIdAsync(int menuId,CancellationToken cancellationToken = default)
+            {
+                return await context.MenuNews
+                    .Where(x => x.MenuId == menuId)
+                    .Select(x => x.NewsId)
+                    .ToListAsync(cancellationToken);
+            }
+
+        public async Task RemoveByMenuAndNewsIdsAsync(int menuId,IEnumerable<int> newsIds,CancellationToken cancellationToken = default)
+                    {
+                        var ids = newsIds.Distinct().ToList();
+
+                        if (ids.Count == 0){return;}
+                        var relations = await context.MenuNews
+                            .Where(x =>x.MenuId == menuId &&ids.Contains(x.NewsId))
+                            .ToListAsync(cancellationToken);
+                        context.MenuNews.RemoveRange(relations);
+                    }
+        public async Task<List<int>> GetMenuIdsByNewsIdAsync(int newsId,CancellationToken cancellationToken = default)
+                    {
+                        return await context.MenuNews
+                            .Where(x => x.NewsId == newsId)
+                            .Select(x => x.MenuId)
+                            .ToListAsync(cancellationToken);
+                    }
+                    public async Task RemoveByNewsAndMenuIdsAsync(int newsId,IEnumerable<int> menuIds,CancellationToken cancellationToken = default)
+                    {
+                        var ids = menuIds.Distinct().ToList();
+                        if (ids.Count == 0)
+                        {
+                            return;
+                        }
+                        var relations = await context.MenuNews.Where(x =>x.NewsId == newsId &&ids.Contains(x.MenuId)).ToListAsync(cancellationToken);
+                        context.MenuNews.RemoveRange(relations);
+                    }
+    }
+    
+    
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Repository\MenuRepository.cs =====
+
+
+using Domain.entity;
+using Domain.repositories;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Repository;
+public class MenuRepository : Repository<Menu> , IMenuRepo
+{
+    public MenuRepository(AppDbContext context) : base(context)
+    {}
+          public async Task<Menu?> GetBySlugAsync(string slug)
+    {
+        return await dbset.FirstOrDefaultAsync(x => x.Slug == slug && x.IsDeleted == false);
+    }
+     public async Task<Menu?> GetByIdWithNewsAsync(int id)
+    {
+        return await GetAllWithNewsQuery().FirstOrDefaultAsync(m => m.Id == id);
+            
+    }
+    public IEnumerable<Menu> GetAllWithNewsAsync()
+    {
+        return  GetAllWithNewsQuery().AsEnumerable();
+     
+    }
+    private IQueryable<Menu> GetAllWithNewsQuery()
+{
+    return context.Menus
+        .Where(m => !m.IsDeleted)
+        .Select(m => new Menu
+        {
+            Id = m.Id,
+            Name = m.Name ?? string.Empty,
+            Slug = m.Slug ?? string.Empty,
+            CreatedAt = m.CreatedAt,
+            UpdatedAt = m.UpdatedAt,
+            IsDeleted = m.IsDeleted,
+            News = m.News
+                .Where(n => !n.IsDeleted)
+                .Select(n => new News
+                {
+                    Id = n.Id,
+                    Title = n.Title ?? string.Empty,
+                    Slug = n.Slug   ?? string.Empty,
+                    Content = n.Content,
+                    Thumbnail = n.Thumbnail,
+                    Address = n.Address,
+                    WardId = n.WardId,
+                    CreatedAt = n.CreatedAt,
+                    UpdatedAt = n.UpdatedAt,
+                    IsDeleted = n.IsDeleted,
+                    Ward = n.Ward == null
+                        ? null
+                        : new WebsiteLocalizationWard
+                        {
+                            WardId = n.Ward.WardId,
+                            WardPid = n.Ward.WardPid,
+                            Name = n.Ward.Name,
+                            NameEn = n.Ward.NameEn,
+                            FullName = n.Ward.FullName,
+                            FullNameEn = n.Ward.FullNameEn,
+                            KeyLocalization = n.Ward.KeyLocalization,
+                            IsActived = n.Ward.IsActived,
+                            Localization = n.Ward.Localization == null
+                                        ? null
+                                        : new WebsiteLocalization
+                                        {
+                                            KeyLocalization = n.Ward.KeyLocalization,
+                                            Localization =n.Ward.Localization.Localization,
+                                            IsActived = n.Ward.Localization.IsActived
+                                        }
+                        }
+                }).ToList()
+        });
+}
+
+
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Repository\NewsRepository.cs =====
+
+using Application.DTO;
+using Domain.entity;
+using Domain.repositories;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Repository;
+public class NewsRepository : Repository<News> , INewsRepo 
+{
+    public NewsRepository(AppDbContext context) : base(context)
+    {
+        
+    }
+
+    public Task<News?> GetBySlugAsync(string slug)
+    {
+        return context.News.FirstOrDefaultAsync(x => x.Slug == slug);
+    }
+    public async Task<News?> GetByIdWithMenusAsync(int id)
+    {
+    return await Query().FirstOrDefaultAsync(m => m.Id==id);
+    }
+    public  IEnumerable<News> GetAllWithMenusAsync()
+    {
+        return Query().AsEnumerable();
+    }
+    private IQueryable<News> Query()
+    {
+        return  context.News
+                .Where(n => !n.IsDeleted)
+                .Select(n => new News
+                {
+                    Id = n.Id,
+                    Title = n.Title ?? string.Empty,
+                    Slug = n.Slug   ?? string.Empty,
+                    Content = n.Content,
+                    Thumbnail = n.Thumbnail,
+                    Address = n.Address,
+                    WardId = n.WardId,
+                    CreatedAt = n.CreatedAt,
+                    UpdatedAt = n.UpdatedAt,
+                    IsDeleted = n.IsDeleted,
+                    Ward = n.Ward == null
+                        ? null
+                        : new WebsiteLocalizationWard
+                        {
+                            WardId = n.Ward.WardId,
+                            WardPid = n.Ward.WardPid,
+                            Name = n.Ward.Name,
+                            NameEn = n.Ward.NameEn,
+                            FullName = n.Ward.FullName,
+                            FullNameEn = n.Ward.FullNameEn,
+                            KeyLocalization = n.Ward.KeyLocalization,
+                            IsActived = n.Ward.IsActived,
+                            Localization = n.Ward.Localization == null
+                                        ? null
+                                        : new WebsiteLocalization
+                                        {
+                                            KeyLocalization = n.Ward.KeyLocalization,
+                                            Localization =n.Ward.Localization.Localization,
+                                            IsActived = n.Ward.Localization.IsActived
+                                        }
+                        },
+                Menu = n.Menu
+                .Where(m => m.IsDeleted == false)
+                .Select(m => new Menu
+                {
+                    Id = m.Id,
+                    Name = m.Name ?? string.Empty,
+                    Slug = m.Slug ?? string.Empty,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt,
+                    IsDeleted = m.IsDeleted
+                }).ToList()
+            });
+    }
+
+}   
+                    
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Repository\Repository.cs =====
+
+using Microsoft.EntityFrameworkCore;
+using Domain.entity;
+using Domain.repositories;
+using Infrastructure.Data;
+
+namespace Infrastructure.Repository;
+public abstract class Repository<T> : IRepository<T> where T : BaseId
+{
+    protected readonly AppDbContext context;
+    protected readonly DbSet<T> dbset;
+    public Repository (AppDbContext appContext)
+    {
+        context=appContext;
+        dbset=appContext.Set<T>();
+    }
+   public async Task<IEnumerable<T>> GetAllAsync()
+    {
+        return await dbset.Where(e=> e.IsDeleted==false).ToListAsync();
+    }
+    
+    public async Task<T> AddAsync(T entity)
+    {
+        await dbset.AddAsync(entity);
+
+        return entity;
+    }
+
+    public async Task UpdateAsync(T entity)
+    {
+        dbset.Update(entity);
+
+    }
+
+    public async Task<T?> GetByIdAsync(int id)
+    {
+        return await dbset.FirstOrDefaultAsync(e=>e.Id==id && e.IsDeleted==false);
+    }
+    public async Task DeleteAsync(int id)
+    {
+        var entity = await GetByIdAsync(id);
+        if(entity == null)
+        {
+            return;
+        }
+        dbset.Remove(entity);
+    }
+    public async Task<bool> ExistsAsync(int id)
+{
+    var entity = await dbset.FirstOrDefaultAsync(x => x.Id == id  && !x.IsDeleted);
+        if (entity == null)
+        {
+            return false;
+        }
+        return true;
+}
+
+    public async Task SoftDelete(int id)
+    {
+         var entity = await GetByIdAsync(id);
+        if(entity == null)
+        {
+            return;
+        }
+        entity.IsDeleted=true;
+        entity.DateledAt=DateTime.UtcNow;
+        dbset.Update(entity);
+
+    }
+    public async Task<int> SoftDeleteManyAsync(IEnumerable<int> ids)
+{
+    var distinctIds = ids.Distinct().ToList();
+    var entities = await dbset
+        .Where(x =>distinctIds.Contains(x.Id) &&!x.IsDeleted)
+        .ToListAsync();
+    var now = DateTime.UtcNow;
+    foreach (var entity in entities)
+    {
+        entity.IsDeleted = true;
+        entity.DateledAt = now;
+        entity.UpdatedAt = now;
+    }
+    return entities.Count;
+}
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Repository\UnitOfWork.cs =====
+
+
+
+using Domain.repositories;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore.Storage;
+
+namespace Infrastructure.Repository;
+
+public class UnitOfWork : IUnitOfWork
+{
+    private readonly AppDbContext context;
+    private IDbContextTransaction? _transaction;
+
+    public UnitOfWork(AppDbContext context)
+    {
+        context = context;
+    }
+
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        _transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    public async Task CommitAsync(CancellationToken cancellationToken = default)
+    {
+        await context.SaveChangesAsync(cancellationToken);
+        await _transaction!.CommitAsync(cancellationToken);
+    }
+
+    public async Task RollbackAsync(CancellationToken cancellationToken = default)
+    {
+        await _transaction!.RollbackAsync(cancellationToken);
+    }
+
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        return await context.SaveChangesAsync(cancellationToken);
+    }
+
+    public void Dispose()
+    {
+        _transaction?.Dispose();
+        context.Dispose();
+    }
+}
+
+
+===== FILE: D:\dotnet\QlMenuNewSQLServer\Infrastructure\Repository\WebsiteLocalizationWardRepository.cs =====
+
+using Domain.entity;
+using Domain.repositories;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace Infrastructure.Repositories;
+
+public class WebsiteLocalizationWardRepository
+    : IWebsiteLocalizationWardRepo
+{
+    private readonly AppDbContext context;
+
+    public WebsiteLocalizationWardRepository(
+        AppDbContext context)
+    {
+        context = context;
+    }
+
+    public async Task<WebsiteLocalizationWard?>GetByIdAsync(int wardId)
+    {
+        return await context.WebsiteLocalizationWards
+            .FirstOrDefaultAsync(x =>
+                x.WardId == wardId &&
+                x.IsActived);
+    }
+
+    public async Task<IEnumerable<WebsiteLocalizationWard>>GetProvincesAsync()
+    {
+        return await context.WebsiteLocalizationWards
+            .Where(x =>
+                x.WardPid == 0 &&
+                x.IsActived)
+            .Select(x => new WebsiteLocalizationWard
+            {
+                WardId = x.WardId,
+                WardPid = x.WardPid,
+                Name = x.Name,
+                NameEn = x.NameEn,
+                FullName = x.FullName,
+                FullNameEn = x.FullNameEn,
+                KeyLocalization = x.KeyLocalization,
+                IsActived = x.IsActived
+            })
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<WebsiteLocalizationWard>> GetWardsByProvinceIdAsync(int provinceId)
+    {
+        return await context.WebsiteLocalizationWards
+            .Where(x =>
+                x.WardPid == provinceId &&
+                x.IsActived)
+            .Select(x => new WebsiteLocalizationWard
+            {
+                WardId = x.WardId,
+                WardPid = x.WardPid,
+                Name = x.Name,
+                NameEn = x.NameEn,
+                FullName = x.FullName,
+                FullNameEn = x.FullNameEn,
+                KeyLocalization = x.KeyLocalization,
+                IsActived = x.IsActived
+            })
+            .ToListAsync();
+    }
+        public async Task<WebsiteLocalizationWard?>  GetProvinceByNameAsync(string provinceName)
+            {
+                var normalizedName = provinceName.Trim().ToLower();
+                return await context.WebsiteLocalizationWards
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.WardPid == 0 &&
+                        x.IsActived &&
+                        (
+                            x.Name.ToLower() == normalizedName ||
+                            x.FullName.ToLower() == normalizedName
+                        ));
+            }
+        public async Task<WebsiteLocalizationWard?> GetWardByNameAndProvinceAsync( string wardName,int provinceId)
+            {
+                var normalizedName = wardName.Trim().ToLower();
+
+                return await context.WebsiteLocalizationWards
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.WardPid == provinceId &&
+                        x.IsActived &&
+                        (
+                            x.Name.ToLower() == normalizedName ||
+                            x.FullName.ToLower() == normalizedName
+                        ));
+            }
+}

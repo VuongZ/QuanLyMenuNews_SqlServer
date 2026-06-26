@@ -14,33 +14,32 @@ public class NewsRepository : Repository<News> , INewsRepo
 
     public Task<News?> GetBySlugAsync(string slug)
     {
-        return _context.News.FirstOrDefaultAsync(x => x.Slug == slug && x.is_deleted == false);
+        return context.News.FirstOrDefaultAsync(x => x.Slug == slug);
     }
     public async Task<News?> GetByIdWithMenusAsync(int id)
-{
-    return await Query()
-        .FirstOrDefaultAsync(m => m.Id==id);
-}
-    public  IAsyncEnumerable<News> GetAllWithMenusAsync()
     {
-      return Query().AsAsyncEnumerable();
+    return await Query().FirstOrDefaultAsync(m => m.Id==id);
+    }
+    public  IEnumerable<News> GetAllWithMenusAsync()
+    {
+        return Query().AsEnumerable();
     }
     private IQueryable<News> Query()
     {
-          return  _context.News
-                .Where(n => !n.is_deleted)
+        return  context.News
+                .Where(n => !n.IsDeleted)
                 .Select(n => new News
                 {
                     Id = n.Id,
                     Title = n.Title ?? string.Empty,
                     Slug = n.Slug   ?? string.Empty,
                     Content = n.Content,
-                    thumbnail = n.thumbnail,
+                    Thumbnail = n.Thumbnail,
                     Address = n.Address,
                     WardId = n.WardId,
-                    created_at = n.created_at,
-                    updated_at = n.updated_at,
-                    is_deleted = n.is_deleted,
+                    CreatedAt = n.CreatedAt,
+                    UpdatedAt = n.UpdatedAt,
+                    IsDeleted = n.IsDeleted,
                     Ward = n.Ward == null
                         ? null
                         : new WebsiteLocalizationWard
@@ -63,15 +62,15 @@ public class NewsRepository : Repository<News> , INewsRepo
                                         }
                         },
                 Menu = n.Menu
-                .Where(m => m.is_deleted == false)
+                .Where(m => m.IsDeleted == false)
                 .Select(m => new Menu
                 {
                     Id = m.Id,
                     Name = m.Name ?? string.Empty,
                     Slug = m.Slug ?? string.Empty,
-                    created_at = m.created_at,
-                    updated_at = m.updated_at,
-                    is_deleted = m.is_deleted
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt,
+                    IsDeleted = m.IsDeleted
                 }).ToList()
             });
     }

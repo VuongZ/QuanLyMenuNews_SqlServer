@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using Application.DTO;
-using Application.Mappers;
 using Application.XuLyNews.Requests;
 using Domain.entity;
 using Domain.repositories;
@@ -9,34 +8,52 @@ using MediatR;
 namespace Application.XuLyNews.UsesCases
 {
     
-    public class GetAllNewsUseCase : IRequestHandler<GetAllNewsRequest, IAsyncEnumerable<NewsResponseDto>>
+    public class GetAllNewsUseCase : IRequestHandler<GetAllNewsRequest, IEnumerable<NewsResponseDto>>
     {
-        private readonly INewsRepo _newsRepo;
+        private readonly INewsRepo newsRepo;
 
-        public GetAllNewsUseCase(INewsRepo newsRepo)
+        public GetAllNewsUseCase(INewsRepo Repo)
         {
-            _newsRepo = newsRepo;
+            newsRepo = Repo;
         }
 
-        public async Task<IAsyncEnumerable<NewsResponseDto>> Handle(GetAllNewsRequest request, CancellationToken cancellationToken)
+        public async Task<IEnumerable<NewsResponseDto>> Handle(GetAllNewsRequest request, CancellationToken cancellationToken)
         {
-                 return StreamNews(cancellationToken);
-        }
-        private async IAsyncEnumerable<NewsResponseDto> StreamNews([EnumeratorCancellation] CancellationToken cancellationToken)
-        {
-            await foreach (var n in _newsRepo.GetAllWithMenusAsync().WithCancellation(cancellationToken))
-            {
-                var dto = n.ToDto();
-                    dto.Menus = n.Menu
-                        .Where(m => !m.is_deleted)
-                        .Select(m => new MenuBasicResponseDto
-                        {
-                            Id   = m.Id,
-                            Name = m.Name ?? string.Empty,
-                            Slug = m.Slug ?? string.Empty
-                        });
-                    yield return dto;
+            return newsRepo.GetAllWithMenusAsync()
+            .Select(n => new NewsResponseDto{
+                    Id        = n.Id,
+                    Title     = n.Title,
+                    Slug      = n.Slug,
+                    Content   = n.Content,
+                    Thumbnail = n.Thumbnail,
+                    Address   = n.Address,
+                    WardId    = n.WardId,
+                    FullAddress = n.Ward == null? n.Address: n.Address + ", " + n.Ward.FullName,
+                    WardInfo = n.Ward == null ? null : new WardInfoResponseDto
+                    {
+                        WardId     = n.Ward.WardId,
+                        WardPid    = n.Ward.WardPid,
+                        Name       = n.Ward.Name,
+                        NameEn     = n.Ward.NameEn,
+                        FullName   = n.Ward.FullName,
+                        FullNameEn = n.Ward.FullNameEn,
+                        Country    = n.Ward.Localization.Localization ,
+                        WardParent = new WardParentResponseDto{
+                            WardId = n.Ward.WardPid,
+                            Name   = n.Ward.FullName != null && n.Ward.FullName.Contains(",")? n.Ward.FullName.Substring(n.Ward.FullName.IndexOf(",") + 1).Trim(): string.Empty,
+                            NameEn = n.Ward.FullNameEn != null && n.Ward.FullNameEn.Contains(",")? n.Ward.FullNameEn.Substring(n.Ward.FullNameEn.IndexOf(",") + 1).Trim(): null,
+                            Country = n.Ward.Localization?.Localization,
+                        }
+                    },  
+                    Menus = n.Menu.Select(m => new MenuBasicResponseDto
+                    {
+                        Id   = m.Id,
+                        Name = m.Name,
+                        Slug = m.Slug,
+                    })
             }
+            );
         }
+
     }
 }

@@ -8,11 +8,11 @@ namespace Application.Usecase.XuLyNews;
 
 public class DeleteManyNewsUseCase : IRequestHandler<DeleteManyNewsRequest, int>
 {
-    private readonly INewsRepo _newsRepo;
+    private readonly INewsRepo newsRepo;
     private readonly IUnitOfWork _uow;
     public DeleteManyNewsUseCase(INewsRepo newsRepo,IUnitOfWork uow)
     {
-        _newsRepo = newsRepo;
+        newsRepo = newsRepo;
         _uow = uow;
     }
 
@@ -25,7 +25,7 @@ public class DeleteManyNewsUseCase : IRequestHandler<DeleteManyNewsRequest, int>
                 .Distinct()
                 .ToList();
             var deletedCount =
-                await _newsRepo.SoftDeleteManyAsync(ids);
+                await newsRepo.SoftDeleteManyAsync(ids);
             if (deletedCount != ids.Count)
             {
                 throw new ValidationException(new[]
