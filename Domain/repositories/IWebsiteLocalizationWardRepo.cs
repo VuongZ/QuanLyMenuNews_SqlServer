@@ -4,6 +4,7 @@ namespace Domain.repositories;
 
 public interface IWebsiteLocalizationWardRepo
 {
+    Task<IEnumerable<WebsiteLocalizationWard>> GetAllAsync();
     Task<WebsiteLocalizationWard?> GetByIdAsync(int wardId);
     Task<IEnumerable<WebsiteLocalizationWard>> GetProvincesAsync();
     Task<IEnumerable<WebsiteLocalizationWard>>GetWardsByProvinceIdAsync(int provinceId);

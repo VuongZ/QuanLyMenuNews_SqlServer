@@ -6,9 +6,9 @@ namespace Domain.entity
         public string ? Slug { get; set; }
         public string ? Content { get; set; }
         public string ? Thumbnail { get; set; }
-        public ICollection<Menu> Menu { get; set; } = new List<Menu>();
+        public ICollection<MenuNews> MenuNews { get; set; } = new List<MenuNews>();
         public string? Address { get; set; }
-            public int? WardId { get; set; }
+        public int? WardId { get; set; }
         public WebsiteLocalizationWard? Ward { get; set; }
     }
 }

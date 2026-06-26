@@ -42,17 +42,17 @@ namespace Application.XuLyNews.UsesCases
                             WardId = n.Ward.WardPid,
                             Name   = n.Ward.FullName != null && n.Ward.FullName.Contains(",")? n.Ward.FullName.Substring(n.Ward.FullName.IndexOf(",") + 1).Trim(): string.Empty,
                             NameEn = n.Ward.FullNameEn != null && n.Ward.FullNameEn.Contains(",")? n.Ward.FullNameEn.Substring(n.Ward.FullNameEn.IndexOf(",") + 1).Trim(): null,
-                            Country = n.Ward.Localization?.Localization,
+                            Country = n.Ward.Localization.Localization,
                         }
                     },  
-                    Menus = n.Menu.Select(m => new MenuBasicResponseDto
+                    Menus = n.MenuNews.Select(m => new MenuBasicResponseDto
                     {
-                        Id   = m.Id,
-                        Name = m.Name,
-                        Slug = m.Slug,
+                        Id   = m.Menu.Id,
+                        Name = m.Menu.Name,
+                        Slug = m.Menu.Slug,
                     })
             }
-            );
+            ).AsEnumerable();
         }
 
     }

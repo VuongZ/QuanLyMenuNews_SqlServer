@@ -8,10 +8,10 @@ namespace Application.Usecase.XuLyMenuNews
 {
     public class UpdateMenuNewsUseCase : IRequestHandler<UpdateMenuNewsRequest, bool>
     {
-        private readonly IMenuNewsRepo _menuNewsRepo;
+        private readonly IMenuNewsRepo menuNewsRepo;
         private readonly IMenuRepo menuRepo;
         private readonly INewsRepo newsRepo;
-        private readonly IUnitOfWork _uow;
+        private readonly IUnitOfWork uow;
 
         public UpdateMenuNewsUseCase(
             IMenuNewsRepo menuNewsRepo,
@@ -19,15 +19,15 @@ namespace Application.Usecase.XuLyMenuNews
             INewsRepo newsRepo,
             IUnitOfWork uow)
         {
-            _menuNewsRepo = menuNewsRepo;
+            menuNewsRepo = menuNewsRepo;
             menuRepo = menuRepo;
             newsRepo = newsRepo;
-            _uow = uow;
+            uow = uow;
         }
 
         public async Task<bool> Handle(UpdateMenuNewsRequest request, CancellationToken cancellationToken)
         {
-            var oldMenuNews = await _menuNewsRepo.GetByIdAsync(request.OldMenuId, request.OldNewsId);
+            var oldMenuNews = await menuNewsRepo.GetByIdAsync(request.OldMenuId, request.OldNewsId);
             if (oldMenuNews == null)
             {
                 return false;
@@ -45,7 +45,7 @@ namespace Application.Usecase.XuLyMenuNews
                 throw new ValidationException("News không tồn tại.");
             }
 
-            var existing = await _menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
+            var existing = await menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
             if (existing != null && (request.MenuId != request.OldMenuId || request.NewsId != request.OldNewsId))
             {
                 throw new ValidationException("Menu_News đã tồn tại.");
@@ -56,13 +56,13 @@ namespace Application.Usecase.XuLyMenuNews
                 return true;
             }
 
-            await _menuNewsRepo.DeleteAsync(request.OldMenuId, request.OldNewsId);
-            await _menuNewsRepo.AddAsync(new MenuNews
+            await menuNewsRepo.DeleteAsync(request.OldMenuId, request.OldNewsId);
+            await menuNewsRepo.AddAsync(new MenuNews
             {
                 MenuId = request.MenuId,
                 NewsId = request.NewsId
             });
-            await _uow.SaveChangesAsync(cancellationToken);
+            await uow.SaveChangesAsync(cancellationToken);
 
             return true;
         }

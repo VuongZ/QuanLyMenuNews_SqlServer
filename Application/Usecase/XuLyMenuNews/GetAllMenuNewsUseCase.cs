@@ -7,16 +7,16 @@ namespace Application.Usecase.XuLyMenuNews
 {
     public class GetAllMenuNewsUseCase : IRequestHandler<GetAllMenuNewsRequest, IEnumerable<MenuNewsResponseDto>>
     {
-        private readonly IMenuNewsRepo _menuNewsRepo;
+        private readonly IMenuNewsRepo menuNewsRepo;
 
         public GetAllMenuNewsUseCase(IMenuNewsRepo menuNewsRepo)
         {
-            _menuNewsRepo = menuNewsRepo;
+            menuNewsRepo = menuNewsRepo;
         }
 
         public async Task<IEnumerable<MenuNewsResponseDto>> Handle(GetAllMenuNewsRequest request, CancellationToken cancellationToken)
         {
-            var menuNews = await _menuNewsRepo.GetAllAsync();
+            var menuNews = await menuNewsRepo.GetAllAsync();
             return menuNews.Select(MenuNewsMapper.ToDto);
         }
     }

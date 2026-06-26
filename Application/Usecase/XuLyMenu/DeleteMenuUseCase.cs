@@ -6,11 +6,11 @@ namespace Application.Usecase.XuLyMenu;
 public class DeleteMenuUseCase : IRequestHandler<DeleteMenuRequest,bool>
 {
        private readonly IMenuRepo _repo;
-          private readonly IUnitOfWork _uow;
+          private readonly IUnitOfWork uow;
         public DeleteMenuUseCase(IMenuRepo repo,IUnitOfWork uow)
         {
             _repo = repo;
-            _uow = uow;
+            uow = uow;
         }
 
     public async Task<bool> Handle(DeleteMenuRequest request, CancellationToken cancellationToken)
@@ -19,7 +19,7 @@ public class DeleteMenuUseCase : IRequestHandler<DeleteMenuRequest,bool>
             if (menu == null) return false;
 
           await _repo.DeleteAsync(request.Id);
-         await _uow.SaveChangesAsync(cancellationToken);
+         await uow.SaveChangesAsync(cancellationToken);
 
           return true;
           

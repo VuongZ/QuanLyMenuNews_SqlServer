@@ -5,7 +5,7 @@ using Application.Requests.XuLyMenu;
 using Application.DTO;
 using System.Runtime.CompilerServices;
 
-namespace Application.XuLyMenu.UseCases
+namespace Application.News.XuLyMenu.UseCases
 {
 
     public class GetAllMenuUseCase : IRequestHandler<GetAllMenuRequest, IEnumerable<MenuResponseDto>>
@@ -24,38 +24,34 @@ namespace Application.XuLyMenu.UseCases
                     Id   = m.Id,
                     Name = m.Name,
                     Slug = m.Slug,
-                    News = m.News.Select(n => new NewsResponseDto
+                    News = m.MenuNews.Select(n => new NewsResponseDto
                 {
-                    Id        = n.Id,
-                    Title     = n.Title ?? string.Empty,
-                    Slug      = n.Slug ?? string.Empty,
-                    Content   = n.Content,
-                    Thumbnail = n.Thumbnail,
-                    Address   = n.Address,
-                    WardId    = n.WardId,
-                FullAddress = n.Ward == null ? n.Address: n.Address + ", " + n.Ward.FullName,
-            WardInfo = n.Ward == null ? null : new WardInfoResponseDto
+                    Id        = n.News.Id,
+                    Title     = n.News.Title ?? string.Empty,
+                    Slug      = n.News.Slug ?? string.Empty,
+                    Content   = n.News.Content,
+                    Thumbnail = n.News.Thumbnail,
+                    Address   = n.News.Address,
+                    WardId    = n.News.WardId,
+                FullAddress = n.News.Ward == null ? n.News.Address: n.News.Address + ", " + n.News.Ward.FullName,
+            WardInfo = n.News.Ward == null ? null : new WardInfoResponseDto
             {
-                WardId     = n.Ward.WardId,
-                WardPid    = n.Ward.WardPid,
-                Name       = n.Ward.Name ?? string.Empty,
-                NameEn     = n.Ward.NameEn,
-                FullName   = n.Ward.FullName ?? string.Empty,
-                FullNameEn = n.Ward.FullNameEn,
-                Country    = n.Ward.Localization?.Localization ?? string.Empty,
+                WardId     = n.News.Ward.WardId,
+                WardPid    = n.News.Ward.WardPid,
+                Name       = n.News.Ward.Name ?? string.Empty,
+                NameEn     = n.News.Ward.NameEn,
+                FullName   = n.News.Ward.FullName ?? string.Empty,
+                FullNameEn = n.News.Ward.FullNameEn,
+                Country    = n.News.Ward.Localization.Localization,
                 WardParent = new WardParentResponseDto
             {
-                WardId = n.Ward.WardPid,
-                Name = n.Ward.FullName != null && n.Ward.FullName.Contains(",")
-                    ? n.Ward.FullName.Substring(n.Ward.FullName.IndexOf(",") + 1).Trim()
-                    : string.Empty,
-                NameEn = n.Ward.FullNameEn != null && n.Ward.FullNameEn.Contains(",")
-                    ? n.Ward.FullNameEn.Substring(n.Ward.FullNameEn.IndexOf(",") + 1).Trim()
-                    : null,
-                Country = n.Ward.Localization?.Localization ?? string.Empty,
+                WardId = n.News.Ward.WardPid,
+                Name = n.News.Ward.FullName != null && n.News.Ward.FullName.Contains(",")? n.News.Ward.FullName.Substring(n.News.Ward.FullName.IndexOf(",") + 1).Trim(): string.Empty,
+                NameEn = n.News.Ward.FullNameEn != null && n.News.Ward.FullNameEn.Contains(",")? n.News.Ward.FullNameEn.Substring(n.News.Ward.FullNameEn.IndexOf(",") + 1).Trim(): null,
+                Country = n.News.Ward.Localization.Localization,
             }}
                 })
-                });
+                }).AsEnumerable();
 
                 
         }

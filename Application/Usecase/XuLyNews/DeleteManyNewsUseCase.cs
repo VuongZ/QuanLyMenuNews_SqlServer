@@ -9,16 +9,16 @@ namespace Application.Usecase.XuLyNews;
 public class DeleteManyNewsUseCase : IRequestHandler<DeleteManyNewsRequest, int>
 {
     private readonly INewsRepo newsRepo;
-    private readonly IUnitOfWork _uow;
+    private readonly IUnitOfWork uow;
     public DeleteManyNewsUseCase(INewsRepo newsRepo,IUnitOfWork uow)
     {
         newsRepo = newsRepo;
-        _uow = uow;
+        uow = uow;
     }
 
     public async Task<int> Handle( DeleteManyNewsRequest request,CancellationToken cancellationToken)
     {
-        await _uow.BeginTransactionAsync(cancellationToken);
+        await uow.BeginTransactionAsync(cancellationToken);
         try
         {
             var ids = request.Ids
@@ -36,12 +36,12 @@ public class DeleteManyNewsUseCase : IRequestHandler<DeleteManyNewsRequest, int>
                     )
                 });
             }
-            await _uow.CommitAsync(cancellationToken);
+            await uow.CommitAsync(cancellationToken);
             return deletedCount;
         }
         catch
         {
-            await _uow.RollbackAsync(cancellationToken);
+            await uow.RollbackAsync(cancellationToken);
             throw;
         }
     }

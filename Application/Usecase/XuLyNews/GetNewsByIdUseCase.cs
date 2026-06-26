@@ -2,6 +2,8 @@ using Application.DTO;
 using Application.Requests.XuLyNews;
 using Domain.entity;
 using Domain.repositories;
+using FluentValidation;
+using FluentValidation.Results;
 using MediatR;
 
 namespace Application.Usecase.XuLyNews
@@ -13,43 +15,55 @@ namespace Application.Usecase.XuLyNews
         {
             newsRepo = Repo;
         }
-        public async Task<NewsResponseDto?> Handle(GetNewsByIdRequest request,CancellationToken cancellationToken)
+    public  Task<NewsResponseDto?> Handle(GetNewsByIdRequest request, CancellationToken cancellationToken)
+    {
+        var result = newsRepo.GetByIdWithMenusAsync(request.id)
+        .Select(n => new NewsResponseDto
         {
-            var n = await newsRepo.GetByIdWithMenusAsync(request.id);
-            if(n==null)
-                return null;
-            return new NewsResponseDto{
-                    Id        = n.Id,
-                    Title     = n.Title,
-                    Slug      = n.Slug,
-                    Content   = n.Content,
-                    Thumbnail = n.Thumbnail,
-                    Address   = n.Address,
-                    WardId    = n.WardId,
-                    FullAddress = n.Ward == null? n.Address: n.Address + ", " + n.Ward.FullName,
-                    WardInfo = n.Ward == null ? null : new WardInfoResponseDto
-                    {
-                        WardId     = n.Ward.WardId,
-                        WardPid    = n.Ward.WardPid,
-                        Name       = n.Ward.Name,
-                        NameEn     = n.Ward.NameEn,
-                        FullName   = n.Ward.FullName,
-                        FullNameEn = n.Ward.FullNameEn,
-                        Country    = n.Ward.Localization.Localization ,
-                        WardParent = new WardParentResponseDto{
-                            WardId = n.Ward.WardPid,
-                            Name   = n.Ward.FullName != null && n.Ward.FullName.Contains(",")? n.Ward.FullName.Substring(n.Ward.FullName.IndexOf(",") + 1).Trim(): string.Empty,
-                            NameEn = n.Ward.FullNameEn != null && n.Ward.FullNameEn.Contains(",")? n.Ward.FullNameEn.Substring(n.Ward.FullNameEn.IndexOf(",") + 1).Trim(): null,
-                            Country = n.Ward.Localization?.Localization,
-                        }
-                    },  
-                    Menus = n.Menu.Select(m => new MenuBasicResponseDto
-                    {
-                        Id   = m.Id,
-                        Name = m.Name,
-                        Slug = m.Slug,
-                    })
-            };
+            Id          = n.Id,
+            Title       = n.Title,
+            Slug        = n.Slug,
+            Content     = n.Content,
+            Thumbnail   = n.Thumbnail,
+            Address     = n.Address,
+            WardId      = n.WardId,
+            FullAddress = n.Ward == null
+                ? n.Address
+                : n.Address + ", " + n.Ward.FullName,
+            WardInfo = n.Ward == null ? null : new WardInfoResponseDto
+            {
+                WardId     = n.Ward.WardId,
+                WardPid    = n.Ward.WardPid,
+                Name       = n.Ward.Name,
+                NameEn     = n.Ward.NameEn,
+                FullName   = n.Ward.FullName,
+                FullNameEn = n.Ward.FullNameEn,
+                Country    = n.Ward.Localization == null? null: n.Ward.Localization.Localization,
+                WardParent = new WardParentResponseDto
+                {
+                    WardId  = n.Ward.WardPid,
+                    Name    = n.Ward.FullName != null && n.Ward.FullName.Contains(",")? n.Ward.FullName.Substring(n.Ward.FullName.IndexOf(",") + 1).Trim(): string.Empty,
+                    NameEn  = n.Ward.FullNameEn != null && n.Ward.FullNameEn.Contains(",")? n.Ward.FullNameEn.Substring(n.Ward.FullNameEn.IndexOf(",") + 1).Trim(): null,
+                    Country = n.Ward.Localization == null? null: n.Ward.Localization.Localization,
+                }
+            },
+            Menus = n.MenuNews
+                .Where(mn => !mn.Menu.IsDeleted)
+                .Select(mn => new MenuBasicResponseDto
+                {
+                    Id   = mn.Menu.Id,
+                    Name = mn.Menu.Name,
+                    Slug = mn.Menu.Slug,
+                })
+        }).FirstOrDefault();
+
+            if (result == null)
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(nameof(request.id), $"ID News '{request.id}' không tồn tại.")
+                });
+
+        return Task.FromResult<NewsResponseDto?>(result);
         }
-}
+    }
 }

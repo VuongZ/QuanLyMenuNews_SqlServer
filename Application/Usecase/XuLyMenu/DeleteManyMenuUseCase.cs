@@ -10,21 +10,21 @@ public class DeleteManyMenuUseCase
     : IRequestHandler<DeleteManyMenuRequest, int>
 {
     private readonly IMenuRepo menuRepo;
-    private readonly IUnitOfWork _uow;
+    private readonly IUnitOfWork uow;
 
     public DeleteManyMenuUseCase(
         IMenuRepo menuRepo,
         IUnitOfWork uow)
     {
         menuRepo = menuRepo;
-        _uow = uow;
+        uow = uow;
     }
 
    public async Task<int> Handle(
     DeleteManyMenuRequest request,
     CancellationToken cancellationToken)
 {
-    await _uow.BeginTransactionAsync(cancellationToken);
+    await uow.BeginTransactionAsync(cancellationToken);
 
     try
     {
@@ -34,12 +34,12 @@ public class DeleteManyMenuUseCase
         {
             throw new ValidationException(new[]{new ValidationFailure(nameof(request.Ids), "Có Menu không tồn tại hoặc đã bị xóa.")});
         }
-        await _uow.CommitAsync(cancellationToken);
+        await uow.CommitAsync(cancellationToken);
         return deletedCount;
     }
     catch
     {
-        await _uow.RollbackAsync(cancellationToken);
+        await uow.RollbackAsync(cancellationToken);
         throw;
     }
 }

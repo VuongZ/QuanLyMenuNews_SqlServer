@@ -13,12 +13,23 @@ public class WebsiteLocalizationWardRepository
     public WebsiteLocalizationWardRepository(
         AppDbContext context)
     {
-        context = context;
+        this.context = context;
+    }
+
+    public async Task<IEnumerable<WebsiteLocalizationWard>> GetAllAsync()
+    {
+        return await context.WebsiteLocalizationWards
+            .AsNoTracking()
+            .Include(x => x.Localization)
+            .Where(x => x.IsActived)
+            .ToListAsync();
     }
 
     public async Task<WebsiteLocalizationWard?>GetByIdAsync(int wardId)
     {
         return await context.WebsiteLocalizationWards
+            .AsNoTracking()
+            .Include(x => x.Localization)
             .FirstOrDefaultAsync(x =>
                 x.WardId == wardId &&
                 x.IsActived);

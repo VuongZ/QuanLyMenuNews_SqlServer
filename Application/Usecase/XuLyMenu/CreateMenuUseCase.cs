@@ -11,19 +11,19 @@ namespace Application.XuLyMenu.UseCases
     {
         private readonly IMenuRepo menuRepo;
         private readonly INewsRepo newsRepo;
-        private readonly IUnitOfWork _uow;
-        private readonly IWebsiteLocalizationWardRepo _wardRepo;
+        private readonly IUnitOfWork uow;
+        private readonly IWebsiteLocalizationWardRepo wardRepo;
 
-        public CreateMenuUseCase(IMenuRepo menuRepo,INewsRepo newsRepo,IUnitOfWork uow,IWebsiteLocalizationWardRepo wardRepo)
+        public CreateMenuUseCase(IMenuRepo mRepo,INewsRepo nRepo,IUnitOfWork uowR,IWebsiteLocalizationWardRepo wRepo)
         {
-            menuRepo  = menuRepo;
-            newsRepo  = newsRepo;
-            _uow       = uow;
-            _wardRepo  = wardRepo;
+            menuRepo  = mRepo;
+            newsRepo  = nRepo;
+            uow       = uowR;
+            wardRepo  = wRepo;
         }
         public async Task<bool> Handle(CreateMenuRequest request, CancellationToken cancellationToken)
         {
-            await _uow.BeginTransactionAsync(cancellationToken);
+            await uow.BeginTransactionAsync(cancellationToken);
             try
             {
                 var existing = await menuRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
@@ -54,11 +54,14 @@ namespace Application.XuLyMenu.UseCases
                             throw new ValidationException(
                                 $"Slug news '{item.Slug}' đã tồn tại với tiêu đề khác.");
                         }
-                        menu.News.Add(news);
-                        continue;
+                        menu.MenuNews.Add(new MenuNews
+                            {
+                                NewsId = news.Id
+                            });
+                            continue;
                     }
                     var wardId = await ResolveWardIdAsync(item.ProvinceId,item.WardId,item.Address);
-                    news = new News
+                    news = new Domain.entity.News
                     {
                         Title      = item.Title,
                         Slug       = item.Slug.Trim().ToLower(),
@@ -70,15 +73,18 @@ namespace Application.XuLyMenu.UseCases
                         UpdatedAt = DateTime.UtcNow
                     };
                     await newsRepo.AddAsync(news);
-                    menu.News.Add(news);
+                    menu.MenuNews.Add(new MenuNews
+                        {
+                            News = news 
+                        });
                 }
                 await menuRepo.AddAsync(menu);
-                await _uow.CommitAsync(cancellationToken);
+                await uow.CommitAsync(cancellationToken);
                 return true;
             }
             catch
             {
-                await _uow.RollbackAsync(cancellationToken);
+                await uow.RollbackAsync(cancellationToken);
                 throw;
             }
         }
@@ -98,7 +104,7 @@ namespace Application.XuLyMenu.UseCases
                         "Phải nhập đầy đủ tỉnh, phường/xã và địa chỉ.")
                 });
             }
-            var province = await _wardRepo.GetByIdAsync(provinceId!.Value);
+            var province = await wardRepo.GetByIdAsync(provinceId!.Value);
             if (province == null || province.WardPid != 0)
             {
                 throw new ValidationException(new[]
@@ -108,7 +114,7 @@ namespace Application.XuLyMenu.UseCases
                         $"Không tìm thấy tỉnh/thành phố có Id = {provinceId}.")
                 });
             }
-            var ward = await _wardRepo.GetByIdAsync(wardId!.Value);
+            var ward = await wardRepo.GetByIdAsync(wardId!.Value);
             if (ward == null)
             {
                 throw new ValidationException(new[]

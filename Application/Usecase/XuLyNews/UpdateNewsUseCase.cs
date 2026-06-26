@@ -11,9 +11,9 @@ public class UpdateNewsUseCase
 {
     private readonly INewsRepo newsRepo;
     private readonly IMenuRepo menuRepo;
-    private readonly IMenuNewsRepo _menuNewsRepo;
-    private readonly IWebsiteLocalizationWardRepo _wardRepo;
-    private readonly IUnitOfWork _uow;
+    private readonly IMenuNewsRepo menuNewsRepo;
+    private readonly IWebsiteLocalizationWardRepo wardRepo;
+    private readonly IUnitOfWork uow;
 
     public UpdateNewsUseCase(
         INewsRepo newsRepo,
@@ -24,14 +24,14 @@ public class UpdateNewsUseCase
     {
         newsRepo     = newsRepo;
         menuRepo     = menuRepo;
-        _menuNewsRepo = menuNewsRepo;
-        _wardRepo     = wardRepo;
-        _uow          = uow;
+        menuNewsRepo = menuNewsRepo;
+        wardRepo     = wardRepo;
+        uow          = uow;
     }
 
     public async Task<bool> Handle(UpdateNewsRequest request, CancellationToken cancellationToken)
     {
-        await _uow.BeginTransactionAsync(cancellationToken);
+        await uow.BeginTransactionAsync(cancellationToken);
         try
         {
             var normalizedNewsSlug = request.slug.Trim().ToLowerInvariant();
@@ -51,11 +51,10 @@ public class UpdateNewsUseCase
             var news = await newsRepo.GetByIdAsync(request.id);
             if (news == null)
             {
-                await _uow.RollbackAsync(cancellationToken);
+                await uow.RollbackAsync(cancellationToken);
                 return false;
             }
 
-            // Đổi sang nhận ProvinceId / WardId (int?)
             var wardId = await ResolveWardIdAsync(
                 request.ProvinceId,
                 request.WardId,
@@ -140,7 +139,7 @@ public class UpdateNewsUseCase
                             UpdatedAt = DateTime.UtcNow
                         };
                         await menuRepo.AddAsync(menu);
-                        await _uow.SaveChangesAsync(cancellationToken);
+                        await uow.SaveChangesAsync(cancellationToken);
                     }
                 }
 
@@ -150,27 +149,27 @@ public class UpdateNewsUseCase
                 }
             }
 
-            var currentMenuIds  = await _menuNewsRepo.GetMenuIdsByNewsIdAsync(news.Id, cancellationToken);
+            var currentMenuIds  = await menuNewsRepo.GetMenuIdsByNewsIdAsync(news.Id, cancellationToken);
             var menuIdsToRemove = currentMenuIds.Except(requestedMenuIds).ToList();
             var menuIdsToAdd    = requestedMenuIds.Except(currentMenuIds).ToList();
 
-            await _menuNewsRepo.RemoveByNewsAndMenuIdsAsync(news.Id, menuIdsToRemove, cancellationToken);
+            await menuNewsRepo.RemoveByNewsAndMenuIdsAsync(news.Id, menuIdsToRemove, cancellationToken);
 
             foreach (var menuId in menuIdsToAdd)
             {
-                await _menuNewsRepo.AddAsync(new MenuNews
+                await menuNewsRepo.AddAsync(new MenuNews
                 {
                     MenuId = menuId,
                     NewsId = news.Id
                 });
             }
 
-            await _uow.CommitAsync(cancellationToken);
+            await uow.CommitAsync(cancellationToken);
             return true;
         }
         catch
         {
-            await _uow.RollbackAsync(cancellationToken);
+            await uow.RollbackAsync(cancellationToken);
             throw;
         }
     }
@@ -195,7 +194,7 @@ public class UpdateNewsUseCase
             });
         }
 
-        var province = await _wardRepo.GetByIdAsync(provinceId!.Value);
+        var province = await wardRepo.GetByIdAsync(provinceId!.Value);
         if (province == null || province.WardPid != 0)
         {
             throw new ValidationException(new[]
@@ -206,7 +205,7 @@ public class UpdateNewsUseCase
             });
         }
 
-        var ward = await _wardRepo.GetByIdAsync(wardId!.Value);
+        var ward = await wardRepo.GetByIdAsync(wardId!.Value);
         if (ward == null)
         {
             throw new ValidationException(new[]

@@ -4,19 +4,16 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Infrastructure.Configuration
 {
-    public class MenuNewsConfig : IEntityTypeConfiguration<Menu>
+    public class MenuNewsConfig : IEntityTypeConfiguration<MenuNews>
     {
-        public void Configure(EntityTypeBuilder<Menu> builder)
+        public void Configure(EntityTypeBuilder<MenuNews> builder)
         {
-            builder.HasMany(menu => menu.News).WithMany(news => news.Menu).UsingEntity<MenuNews>(right => right.HasOne(x => x.News).WithMany().HasForeignKey(x => x.NewsId),
-                    left => left.HasOne(x => x.Menu).WithMany().HasForeignKey(x => x.MenuId),
-                    join =>
-                    {
-                        join.ToTable("Menu_News");
-                        join.HasKey(x => new { x.MenuId, x.NewsId });
-                        join.Property(x => x.MenuId).HasColumnName("Menu_Id");
-                        join.Property(x => x.NewsId).HasColumnName("News_Id");
-                    });
+            builder.ToTable("Menu_News");
+            builder.HasKey(mn => new { mn.MenuId, mn.NewsId });
+            builder.Property(mn => mn.MenuId).HasColumnName("menu_id");
+            builder.Property(mn => mn.NewsId).HasColumnName("news_id");
+            builder.HasOne(mn => mn.Menu).WithMany(m => m.MenuNews).HasForeignKey(mn => mn.MenuId);
+            builder.HasOne(mn => mn.News).WithMany(n => n.MenuNews).HasForeignKey(mn => mn.NewsId);
         }
     }
 }

@@ -1,5 +1,6 @@
 using Application.Common;
 using Application.DTO;
+using Application.News.XuLyMenu.UseCases;
 using Application.XuLyMenu.UseCases;
 using Domain.repositories;
 using FluentValidation;

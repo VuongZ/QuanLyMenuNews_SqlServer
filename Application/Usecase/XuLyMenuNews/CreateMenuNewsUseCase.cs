@@ -9,10 +9,10 @@ namespace Application.Usecase.XuLyMenuNews
 {
     public class CreateMenuNewsUseCase : IRequestHandler<CreateMenuNewsRequest, bool>
     {
-        private readonly IMenuNewsRepo _menuNewsRepo;
+        private readonly IMenuNewsRepo menuNewsRepo;
         private readonly IMenuRepo menuRepo;
         private readonly INewsRepo newsRepo;
-        private readonly IUnitOfWork _uow;
+        private readonly IUnitOfWork uow;
 
         public CreateMenuNewsUseCase(
             IMenuNewsRepo menuNewsRepo,
@@ -20,10 +20,10 @@ namespace Application.Usecase.XuLyMenuNews
             INewsRepo newsRepo,
             IUnitOfWork uow)
         {
-            _menuNewsRepo = menuNewsRepo;
+            menuNewsRepo = menuNewsRepo;
             menuRepo = menuRepo;
             newsRepo = newsRepo;
-            _uow = uow;
+            uow = uow;
         }
 
      public async Task<bool> Handle(CreateMenuNewsRequest request, CancellationToken cancellationToken){
@@ -49,7 +49,7 @@ namespace Application.Usecase.XuLyMenuNews
         });
     }
 
-    if (await _menuNewsRepo.ExistsAsync(
+    if (await menuNewsRepo.ExistsAsync(
         request.MenuId,
         request.NewsId))
     {
@@ -62,13 +62,13 @@ namespace Application.Usecase.XuLyMenuNews
         });
     }
 
-    await _menuNewsRepo.AddAsync(new MenuNews
+    await menuNewsRepo.AddAsync(new MenuNews
     {
         MenuId = request.MenuId,
         NewsId = request.NewsId
     });
 
-    await _uow.SaveChangesAsync(cancellationToken);
+    await uow.SaveChangesAsync(cancellationToken);
 
     return true;
 }

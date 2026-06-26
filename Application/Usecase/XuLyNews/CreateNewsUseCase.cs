@@ -10,34 +10,30 @@ namespace Application.XuLyNews.UseCases;
 public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
 {
     private readonly IMenuRepo menuRepo;
-    private readonly INewsRepo newsRepo;
-    private readonly IWebsiteLocalizationWardRepo _wardRepo;
-    private readonly IUnitOfWork _uow;
+    private readonly INewsRepo newRepo;
+    private readonly IWebsiteLocalizationWardRepo wardRepo;
+    private readonly IUnitOfWork uow;
 
-    public CreateNewsUseCase(IMenuRepo menuRepo,INewsRepo newsRepo,IWebsiteLocalizationWardRepo wardRepo,IUnitOfWork uow)
+    public CreateNewsUseCase(IMenuRepo menusRepo,INewsRepo newsRepo,IWebsiteLocalizationWardRepo wardsRepo,IUnitOfWork uowR)
     {
-        menuRepo = menuRepo;
-        newsRepo = newsRepo;
-        _wardRepo = wardRepo;
-        _uow = uow;
+        menuRepo = menusRepo;
+        newRepo = newsRepo;
+        wardRepo = wardsRepo;
+        uow = uowR;
     }
     public async Task<bool> Handle(CreateNewsRequest request, CancellationToken cancellationToken)
     {
-        await _uow.BeginTransactionAsync(cancellationToken);
-        try
-        {
-            var existing = await newsRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
+         var existing = await newRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
             if (existing != null)
             {
-                throw new ValidationException(new[]
-                {
-                    new ValidationFailure(
-                        nameof(request.Slug),
-                        $"Slug news '{request.Slug}' đã tồn tại.")
-                });
-            }
+                throw new ValidationException(new[]{new ValidationFailure(nameof(request.Slug),$"Slug news '{request.Slug}' đã tồn tại.")});
+                }
+        await uow.BeginTransactionAsync(cancellationToken);
+        try
+        {
+           
             var wardId = await ResolveWardIdAsync(request.ProvinceId,request.WardId,request.Address);
-            var news = new News
+            var news = new Domain.entity.News
             {
                 Title      = request.Title.Trim(),
                 Slug       = request.Slug.Trim().ToLower(),
@@ -74,15 +70,15 @@ public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
                     };
                     await menuRepo.AddAsync(menu);
                 }
-                news.Menu.Add(menu);
+                news.MenuNews.Add(new MenuNews{Menu=menu});
             }
-            await newsRepo.AddAsync(news);
-            await _uow.CommitAsync(cancellationToken);
+            await newRepo.AddAsync(news);
+            await uow.CommitAsync(cancellationToken);
             return true;
         }
         catch
         {
-            await _uow.RollbackAsync(cancellationToken);
+            await uow.RollbackAsync(cancellationToken);
             throw;
         }
     }
@@ -104,7 +100,7 @@ public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
                     "Phải nhập đầy đủ tỉnh, phường/xã và địa chỉ.")
             });
         }
-        var province = await _wardRepo.GetByIdAsync(provinceId!.Value);
+        var province = await wardRepo.GetByIdAsync(provinceId!.Value);
         if (province == null || province.WardPid != 0)
         {
             throw new ValidationException(new[]
@@ -114,7 +110,7 @@ public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
                     $"Không tìm thấy tỉnh/thành phố có Id = {provinceId}.")
             });
         }
-        var ward = await _wardRepo.GetByIdAsync(wardId!.Value);
+        var ward = await wardRepo.GetByIdAsync(wardId!.Value);
         if (ward == null)
         {
             throw new ValidationException(new[]

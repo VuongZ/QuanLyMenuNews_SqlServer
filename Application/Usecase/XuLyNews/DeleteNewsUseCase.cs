@@ -8,11 +8,11 @@ namespace Application.Usecase.XuLyNews
     public class DeleteNewsUseCase : IRequestHandler<DeleteNewsRequest, bool>
     {
         private readonly INewsRepo newsRepo;
-                private readonly IUnitOfWork _uow;
+                private readonly IUnitOfWork uow;
         public DeleteNewsUseCase(INewsRepo Repo, IUnitOfWork uow)
         {
             newsRepo = Repo;
-            _uow = uow;
+            uow = uow;
         }
         public async Task<bool> Handle(DeleteNewsRequest request, CancellationToken cancellationToken)
         {
@@ -21,7 +21,7 @@ namespace Application.Usecase.XuLyNews
                 return false;
 
             await newsRepo.DeleteAsync(request.id);
-            await _uow.SaveChangesAsync(cancellationToken);
+            await uow.SaveChangesAsync(cancellationToken);
             return true;
         }
     }
