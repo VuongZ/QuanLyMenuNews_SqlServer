@@ -11,8 +11,9 @@ public class CreateNewsRequest : IRequest<bool>
     public string Thumbnail { get; set; } = null!;
 
     public string? Address { get; set; }
+    public string? CountryKey { get; set; }
     
-     public int? ProvinceId { get; set; }  
+    public int? ProvinceId { get; set; }  
     public int? WardId { get; set; }
     public List<MenuInputRequest> DanhSachMenus { get; set; } = new();
 }

@@ -11,13 +11,13 @@ namespace Application.Usecase.XuLyMenuNews
 
         public DeleteMenuNewsUseCase(IMenuNewsRepo menuNewsRepo, IUnitOfWork uow)
         {
-            menuNewsRepo = menuNewsRepo;
-            uow = uow;
+            this.menuNewsRepo = menuNewsRepo;
+            this.uow = uow;
         }
 
         public async Task<bool> Handle(DeleteMenuNewsRequest request, CancellationToken cancellationToken)
         {
-            var menuNews = await menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
+            var menuNews = menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId).FirstOrDefault();
             if (menuNews == null)
             {
                 return false;

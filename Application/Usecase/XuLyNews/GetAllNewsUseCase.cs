@@ -45,7 +45,9 @@ namespace Application.XuLyNews.UsesCases
                             Country = n.Ward.Localization.Localization,
                         }
                     },  
-                    Menus = n.MenuNews.Select(m => new MenuBasicResponseDto
+                    Menus = n.MenuNews
+                    .Where(m=>!m.Menu.IsDeleted)
+                    .Select(m => new MenuBasicResponseDto
                     {
                         Id   = m.Menu.Id,
                         Name = m.Menu.Name,

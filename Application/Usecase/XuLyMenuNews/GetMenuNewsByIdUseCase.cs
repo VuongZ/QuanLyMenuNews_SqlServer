@@ -11,13 +11,22 @@ namespace Application.Usecase.XuLyMenuNews
 
         public GetMenuNewsByIdUseCase(IMenuNewsRepo menuNewsRepo)
         {
-            menuNewsRepo = menuNewsRepo;
+            this.menuNewsRepo = menuNewsRepo;
         }
 
-        public async Task<MenuNewsResponseDto?> Handle(GetMenuNewsByIdRequest request, CancellationToken cancellationToken)
+        public Task<MenuNewsResponseDto?> Handle(GetMenuNewsByIdRequest request, CancellationToken cancellationToken)
         {
-            var menuNews = await menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
-            return menuNews == null ? null : MenuNewsMapper.ToDto(menuNews);
+            var result = menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId)
+                .Select(menuNews => new MenuNewsResponseDto
+                {
+                    MenuId = menuNews.MenuId,
+                    NewsId = menuNews.NewsId,
+                    MenuName = menuNews.Menu == null ? string.Empty : menuNews.Menu.Name ?? string.Empty,
+                    NewsTitle = menuNews.News == null ? string.Empty : menuNews.News.Title ?? string.Empty
+                })
+                .FirstOrDefault();
+
+            return Task.FromResult(result);
         }
     }
 }

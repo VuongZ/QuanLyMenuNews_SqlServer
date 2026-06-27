@@ -7,12 +7,8 @@ public class DeleteMenuNewsRequestValidator
 {
     public DeleteMenuNewsRequestValidator()
     {
-        RuleFor(x => x.MenuId)
-            .GreaterThan(0)
-            .WithMessage("MenuId không hợp lệ.");
+        RuleFor(x => x.MenuId).GreaterThan(0).WithMessage("MenuId không hợp lệ.");
 
-        RuleFor(x => x.NewsId)
-            .GreaterThan(0)
-            .WithMessage("NewsId không hợp lệ.");
+        RuleFor(x => x.NewsId).GreaterThan(0).WithMessage("NewsId không hợp lệ.");
     }
 }

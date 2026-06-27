@@ -170,3 +170,4 @@ D:\dotnet\QlMenuNewSQLServer\Api\bin\Debug\net8.0\Microsoft.Extensions.Dependenc
 D:\dotnet\QlMenuNewSQLServer\Api\bin\Debug\net8.0\Microsoft.Extensions.Logging.Abstractions.dll
 D:\dotnet\QlMenuNewSQLServer\Api\bin\Debug\net8.0\System.Diagnostics.DiagnosticSource.dll
 D:\dotnet\QlMenuNewSQLServer\Api\obj\Debug\net8.0\Api.sourcelink.json
+D:\dotnet\QlMenuNewSQLServer\Api\bin\Debug\net8.0\AutoMapper.dll

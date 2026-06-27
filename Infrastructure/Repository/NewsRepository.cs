@@ -20,7 +20,6 @@ public class NewsRepository : Repository<News> , INewsRepo
     {
         return  context.News.Where(m => m.Id == id && !m.IsDeleted);
     }
-
     public IQueryable<News> GetAllWithMenusAsync()
     {
         return context.News.Where(n => !n.IsDeleted).AsSplitQuery();

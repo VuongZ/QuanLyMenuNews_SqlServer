@@ -14,9 +14,9 @@ namespace Infrastructure.Repository
             context = db;
         }
 
-        public async Task<IEnumerable<MenuNews>> GetAllAsync()
+        public IQueryable<MenuNews> GetAllAsync()
         {
-            return await Query().ToListAsync();
+            return Query();
         }
 
         public async Task<IEnumerable<MenuNews>> SearchAsync(int? menuId, int? newsId)
@@ -33,9 +33,9 @@ namespace Infrastructure.Repository
             return await query.ToListAsync();
         }
 
-        public async Task<MenuNews?> GetByIdAsync(int menuId, int newsId)
+        public IQueryable<MenuNews> GetByIdAsync(int menuId, int newsId)
         {
-            return await Query().FirstOrDefaultAsync(x => x.MenuId == menuId && x.NewsId == newsId);
+            return Query().Where(x => x.MenuId == menuId && x.NewsId == newsId);
         }
 
         public async Task AddAsync(MenuNews menuNews)
@@ -110,7 +110,6 @@ namespace Infrastructure.Repository
         public async Task RemoveByMenuAndNewsIdsAsync(int menuId,IEnumerable<int> newsIds,CancellationToken cancellationToken = default)
                     {
                         var ids = newsIds.Distinct().ToList();
-
                         if (ids.Count == 0){return;}
                         var relations = await context.MenuNews
                             .Where(x =>x.MenuId == menuId &&ids.Contains(x.NewsId))

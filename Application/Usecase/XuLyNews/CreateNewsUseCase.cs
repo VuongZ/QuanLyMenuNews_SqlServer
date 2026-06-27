@@ -13,26 +13,26 @@ public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
     private readonly INewsRepo newRepo;
     private readonly IWebsiteLocalizationWardRepo wardRepo;
     private readonly IUnitOfWork uow;
-
-    public CreateNewsUseCase(IMenuRepo menusRepo,INewsRepo newsRepo,IWebsiteLocalizationWardRepo wardsRepo,IUnitOfWork uowR)
+    private readonly IWebsiteLocalizationRepo localizationRepo;
+    public CreateNewsUseCase(IMenuRepo menusRepo,INewsRepo newsRepo,IWebsiteLocalizationWardRepo wardsRepo,IUnitOfWork uowR,IWebsiteLocalizationRepo lRepo)
     {
         menuRepo = menusRepo;
         newRepo = newsRepo;
         wardRepo = wardsRepo;
         uow = uowR;
+        localizationRepo=lRepo;
     }
     public async Task<bool> Handle(CreateNewsRequest request, CancellationToken cancellationToken)
     {
-         var existing = await newRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
+        var existing = await newRepo.GetBySlugAsync(request.Slug.Trim().ToLower());
             if (existing != null)
             {
                 throw new ValidationException(new[]{new ValidationFailure(nameof(request.Slug),$"Slug news '{request.Slug}' đã tồn tại.")});
-                }
+            }
         await uow.BeginTransactionAsync(cancellationToken);
         try
         {
-           
-            var wardId = await ResolveWardIdAsync(request.ProvinceId,request.WardId,request.Address);
+            var wardId = await ResolveWardIdAsync(request.CountryKey,request.ProvinceId,request.WardId,request.Address,cancellationToken);
             var news = new Domain.entity.News
             {
                 Title      = request.Title.Trim(),
@@ -82,53 +82,49 @@ public class CreateNewsUseCase : IRequestHandler<CreateNewsRequest, bool>
             throw;
         }
     }
-
-    private async Task<int?> ResolveWardIdAsync(int? provinceId, int? wardId, string? address)
-    {
-        var hasProvince = provinceId.HasValue;
-        var hasWard     = wardId.HasValue;
-        var hasAddress  = !string.IsNullOrWhiteSpace(address);
-
-        if (!hasProvince && !hasWard && !hasAddress)
-            return null;
-        if (!hasProvince || !hasWard || !hasAddress)
+        private async Task<int?> ResolveWardIdAsync(string? countryKey,int? provinceId,int? wardId,string? address,CancellationToken cancellationToken)
         {
-            throw new ValidationException(new[]
+            var hasCountry =!string.IsNullOrWhiteSpace(countryKey);
+            var hasProvince =provinceId.HasValue;
+            var hasWard =wardId.HasValue;
+            var hasAddress =!string.IsNullOrWhiteSpace(address);
+            if (!hasCountry &&!hasProvince &&!hasWard &&!hasAddress)
             {
-                new ValidationFailure(
-                    "Address",
-                    "Phải nhập đầy đủ tỉnh, phường/xã và địa chỉ.")
-            });
-        }
-        var province = await wardRepo.GetByIdAsync(provinceId!.Value);
-        if (province == null || province.WardPid != 0)
-        {
-            throw new ValidationException(new[]
+                return null;
+            }
+            if (!hasCountry || !hasProvince || !hasWard || !hasAddress)
             {
-                new ValidationFailure(
-                    nameof(provinceId),
-                    $"Không tìm thấy tỉnh/thành phố có Id = {provinceId}.")
-            });
-        }
-        var ward = await wardRepo.GetByIdAsync(wardId!.Value);
-        if (ward == null)
-        {
-            throw new ValidationException(new[]
+                throw new ValidationException(new[]{new ValidationFailure("Address","Phải nhập đầy đủ quốc gia, tỉnh/thành phố, phường/xã và địa chỉ.")});
+            }
+            var normalizedCountryKey =countryKey!.Trim().ToUpperInvariant();
+            var country = await localizationRepo.GetByKeyAsync(normalizedCountryKey);
+            if (country == null)
             {
-                new ValidationFailure(
-                    nameof(wardId),
-                    $"Không tìm thấy phường/xã có Id = {wardId}.")
-            });
-        }
-        if (ward.WardPid != provinceId!.Value)
-        {
-            throw new ValidationException(new[]
+                throw new ValidationException(new[]{ new ValidationFailure(nameof(countryKey),$"Không tìm thấy quốc gia có mã '{countryKey}'.")});
+            }
+            var province = await wardRepo.GetByIdAsync(provinceId!.Value);
+            if (province == null || province.WardPid != 0)
             {
-                new ValidationFailure(
-                    nameof(wardId),
-                    $"Phường/xã Id = {wardId} không thuộc tỉnh Id = {provinceId}.")
-            });
+                throw new ValidationException(new[]{new ValidationFailure(nameof(provinceId),$"Không tìm thấy tỉnh/thành phố có Id = {provinceId}.")});
+            }
+            if (!string.Equals(province.KeyLocalization,normalizedCountryKey,StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ValidationException(new[]{ new ValidationFailure(nameof(provinceId),$"Tỉnh/thành phố Id = {provinceId} không thuộc quốc gia '{countryKey}'.")});
+            }
+            var ward = await wardRepo.GetByIdAsync(wardId!.Value);
+            if (ward == null)
+            {
+                throw new ValidationException(new[]{new ValidationFailure(nameof(wardId),$"Không tìm thấy phường/xã có Id = {wardId}.")});
+            }
+            if (ward.WardPid != province.WardId)
+            {
+                throw new ValidationException(new[] { new ValidationFailure(nameof(wardId),$"Phường/xã Id = {wardId} không thuộc tỉnh Id = {provinceId}.")});
+            }
+            if (!string.Equals(ward.KeyLocalization,normalizedCountryKey,StringComparison.OrdinalIgnoreCase))
+            {
+                throw new ValidationException(new[]
+                { new ValidationFailure(nameof(wardId),$"Phường/xã Id = {wardId} không thuộc quốc gia '{countryKey}'.")});
+            }
+            return ward.WardId;
         }
-        return ward.WardId;
-    }
 }

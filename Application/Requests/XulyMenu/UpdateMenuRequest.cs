@@ -15,7 +15,7 @@ public class UpdateMenuRequest : IRequest<bool>
 
 public class UpdateMenuNewsItemRequest
 {
-    public int? Id { get; set; }
+    public int Id { get; set; }
 
     public string Title { get; set; } = null!;
 
@@ -24,6 +24,8 @@ public class UpdateMenuNewsItemRequest
     public string Content { get; set; } = null!;
 
     public string? Thumbnail { get; set; }
+    public string? CountryKey { get; set; }
+
     public int? ProvinceId { get; set; }
     public int? WardId { get; set; }
     public string? Address { get; set; }

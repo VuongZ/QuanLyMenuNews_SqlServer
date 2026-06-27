@@ -19,15 +19,15 @@ namespace Application.Usecase.XuLyMenuNews
             INewsRepo newsRepo,
             IUnitOfWork uow)
         {
-            menuNewsRepo = menuNewsRepo;
-            menuRepo = menuRepo;
-            newsRepo = newsRepo;
-            uow = uow;
+            this.menuNewsRepo = menuNewsRepo;
+            this.menuRepo = menuRepo;
+            this.newsRepo = newsRepo;
+            this.uow = uow;
         }
 
         public async Task<bool> Handle(UpdateMenuNewsRequest request, CancellationToken cancellationToken)
         {
-            var oldMenuNews = await menuNewsRepo.GetByIdAsync(request.OldMenuId, request.OldNewsId);
+            var oldMenuNews = menuNewsRepo.GetByIdAsync(request.OldMenuId, request.OldNewsId).FirstOrDefault();
             if (oldMenuNews == null)
             {
                 return false;
@@ -45,7 +45,7 @@ namespace Application.Usecase.XuLyMenuNews
                 throw new ValidationException("News không tồn tại.");
             }
 
-            var existing = await menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId);
+            var existing = menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId).FirstOrDefault();
             if (existing != null && (request.MenuId != request.OldMenuId || request.NewsId != request.OldNewsId))
             {
                 throw new ValidationException("Menu_News đã tồn tại.");

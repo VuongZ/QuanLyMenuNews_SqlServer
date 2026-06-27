@@ -18,7 +18,7 @@ namespace Application.News.XuLyMenu.UseCases
 
         public async Task<IEnumerable<MenuResponseDto>> Handle( GetAllMenuRequest request,CancellationToken cancellationToken)
         {
-              return  menuRepo.GetAllWithNewsAsync()
+            return  menuRepo.GetAllWithNewsAsync()
                 .Select(m => new MenuResponseDto
                 {
                     Id   = m.Id,

@@ -12,20 +12,15 @@ public class DeleteManyMenuUseCase
     private readonly IMenuRepo menuRepo;
     private readonly IUnitOfWork uow;
 
-    public DeleteManyMenuUseCase(
-        IMenuRepo menuRepo,
-        IUnitOfWork uow)
+    public DeleteManyMenuUseCase(IMenuRepo menusRepo,IUnitOfWork uows)
     {
-        menuRepo = menuRepo;
-        uow = uow;
+        menuRepo = menusRepo;
+        uow = uows;
     }
 
-   public async Task<int> Handle(
-    DeleteManyMenuRequest request,
-    CancellationToken cancellationToken)
-{
-    await uow.BeginTransactionAsync(cancellationToken);
-
+    public async Task<int> Handle(DeleteManyMenuRequest request,CancellationToken cancellationToken)
+    {
+        await uow.BeginTransactionAsync(cancellationToken);
     try
     {
         var ids = request.Ids.Distinct().ToList();

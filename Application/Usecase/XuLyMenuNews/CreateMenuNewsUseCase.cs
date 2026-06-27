@@ -20,10 +20,10 @@ namespace Application.Usecase.XuLyMenuNews
             INewsRepo newsRepo,
             IUnitOfWork uow)
         {
-            menuNewsRepo = menuNewsRepo;
-            menuRepo = menuRepo;
-            newsRepo = newsRepo;
-            uow = uow;
+            this.menuNewsRepo = menuNewsRepo;
+            this.menuRepo = menuRepo;
+            this.newsRepo = newsRepo;
+            this.uow = uow;
         }
 
      public async Task<bool> Handle(CreateMenuNewsRequest request, CancellationToken cancellationToken){

@@ -11,11 +11,10 @@ public class UnitOfWork : IUnitOfWork
     private readonly AppDbContext context;
     private IDbContextTransaction? _transaction;
 
-    public UnitOfWork(AppDbContext context)
+    public UnitOfWork(AppDbContext db)
     {
-        context = context;
+        context = db;
     }
-
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
         _transaction = await context.Database.BeginTransactionAsync(cancellationToken);
@@ -36,7 +35,6 @@ public class UnitOfWork : IUnitOfWork
     {
         return await context.SaveChangesAsync(cancellationToken);
     }
-
     public void Dispose()
     {
         _transaction?.Dispose();
