@@ -40,6 +40,9 @@ public class UpdateMenuUseCase : IRequestHandler<UpdateMenuRequest, bool>
             {
                 throw new ValidationException(new[]{new ValidationFailure(nameof(request.Slug),$"Slug Menu '{request.Slug}' đã tồn tại.")});
             }
+            await uow.BeginTransactionAsync(cancellationToken);
+            try
+            {
             mapper.Map(request, menu);
             menu.UpdatedAt = DateTime.UtcNow;
             foreach (var item in request.DanhSachNews)
@@ -56,8 +59,14 @@ public class UpdateMenuUseCase : IRequestHandler<UpdateMenuRequest, bool>
                 await newsRepo.UpdateAsync(news);
                 }
                     await menuRepo.UpdateAsync(menu);
-                    await uow.SaveChangesAsync(cancellationToken);
+                    await uow.CommitAsync(cancellationToken);
                     return true;
+        }
+            catch
+                {
+                await uow.RollbackAsync(cancellationToken);
+                throw;
+                }
         }   
     private async Task<int?> ResolveWardIdAsync(string? countryKey,int? provinceId,int? wardId,string? address,CancellationToken cancellationToken)
         {

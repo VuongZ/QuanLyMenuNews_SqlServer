@@ -1,5 +1,4 @@
 using Application.Requests.XuLyNews;
-using Domain.entity;
 using Domain.repositories;
 using MediatR;
 
@@ -9,17 +8,16 @@ namespace Application.Usecase.XuLyNews
     {
         private readonly INewsRepo newsRepo;
                 private readonly IUnitOfWork uow;
-        public DeleteNewsUseCase(INewsRepo Repo, IUnitOfWork uow)
+        public DeleteNewsUseCase(INewsRepo Repo, IUnitOfWork Iuow)
         {
             newsRepo = Repo;
-            uow = uow;
+            uow = Iuow;
         }
         public async Task<bool> Handle(DeleteNewsRequest request, CancellationToken cancellationToken)
         {
             var news = await newsRepo.GetByIdAsync(request.id);
             if (news == null)
                 return false;
-
             await newsRepo.DeleteAsync(request.id);
             await uow.SaveChangesAsync(cancellationToken);
             return true;

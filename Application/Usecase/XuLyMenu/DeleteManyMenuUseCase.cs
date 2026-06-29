@@ -20,22 +20,23 @@ public class DeleteManyMenuUseCase
 
     public async Task<int> Handle(DeleteManyMenuRequest request,CancellationToken cancellationToken)
     {
-        await uow.BeginTransactionAsync(cancellationToken);
-    try
-    {
         var ids = request.Ids.Distinct().ToList();
-        var deletedCount =await menuRepo.SoftDeleteManyAsync(ids);
-        if (deletedCount != ids.Count)
+        var existingCount  = await menuRepo.CountByIdsAsync(ids);
+            if (existingCount  != ids.Count)
+            {
+                throw new ValidationException(new[] { new ValidationFailure(nameof(request.Ids), "Có Menu không tồn tại hoặc đã bị xóa."  )});
+            }
+        await uow.BeginTransactionAsync(cancellationToken);
+        try
         {
-            throw new ValidationException(new[]{new ValidationFailure(nameof(request.Ids), "Có Menu không tồn tại hoặc đã bị xóa.")});
+            var deletedCount = await menuRepo.SoftDeleteManyAsync(ids);
+            await uow.CommitAsync(cancellationToken);
+            return deletedCount;
         }
-        await uow.CommitAsync(cancellationToken);
-        return deletedCount;
+        catch
+        {
+            await uow.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
-    catch
-    {
-        await uow.RollbackAsync(cancellationToken);
-        throw;
-    }
-}
 }

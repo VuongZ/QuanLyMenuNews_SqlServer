@@ -18,8 +18,7 @@ namespace Infrastructure.Repository
         {
             return Query();
         }
-
-        public async Task<IEnumerable<MenuNews>> SearchAsync(int? menuId, int? newsId)
+        public IQueryable<MenuNews> SearchAsync(int? menuId, int? newsId)
         {
             var query = Query();
             if (menuId.HasValue)
@@ -30,7 +29,7 @@ namespace Infrastructure.Repository
             {
                 query = query.Where(x => x.NewsId == newsId.Value);
             }
-            return await query.ToListAsync();
+            return query;
         }
 
         public IQueryable<MenuNews> GetByIdAsync(int menuId, int newsId)
@@ -99,39 +98,39 @@ namespace Infrastructure.Repository
                     }
                 });
         }
-        public async Task<List<int>> GetNewsIdsByMenuIdAsync(int menuId,CancellationToken cancellationToken = default)
+        public async Task<int[]> GetNewsIdsByMenuIdAsync(int menuId,CancellationToken cancellationToken = default)
             {
                 return await context.MenuNews
                     .Where(x => x.MenuId == menuId)
                     .Select(x => x.NewsId)
-                    .ToListAsync(cancellationToken);
+                    .ToArrayAsync(cancellationToken);
             }
 
         public async Task RemoveByMenuAndNewsIdsAsync(int menuId,IEnumerable<int> newsIds,CancellationToken cancellationToken = default)
                     {
-                        var ids = newsIds.Distinct().ToList();
-                        if (ids.Count == 0){return;}
-                        var relations = await context.MenuNews
+                        var ids = newsIds.Distinct().ToArray();
+                        if (ids.Length == 0){return;}
+                        await context.MenuNews
                             .Where(x =>x.MenuId == menuId &&ids.Contains(x.NewsId))
-                            .ToListAsync(cancellationToken);
-                        context.MenuNews.RemoveRange(relations);
+                            .ExecuteDeleteAsync(cancellationToken);
                     }
-        public async Task<List<int>> GetMenuIdsByNewsIdAsync(int newsId,CancellationToken cancellationToken = default)
+        public async Task<int[]> GetMenuIdsByNewsIdAsync(int newsId,CancellationToken cancellationToken = default)
                     {
                         return await context.MenuNews
                             .Where(x => x.NewsId == newsId)
                             .Select(x => x.MenuId)
-                            .ToListAsync(cancellationToken);
+                            .ToArrayAsync(cancellationToken);
                     }
                     public async Task RemoveByNewsAndMenuIdsAsync(int newsId,IEnumerable<int> menuIds,CancellationToken cancellationToken = default)
                     {
-                        var ids = menuIds.Distinct().ToList();
-                        if (ids.Count == 0)
+                        var ids = menuIds.Distinct().ToArray();
+                        if (ids.Length == 0)
                         {
                             return;
                         }
-                        var relations = await context.MenuNews.Where(x =>x.NewsId == newsId &&ids.Contains(x.MenuId)).ToListAsync(cancellationToken);
-                        context.MenuNews.RemoveRange(relations);
+                        await context.MenuNews
+                            .Where(x =>x.NewsId == newsId &&ids.Contains(x.MenuId))
+                            .ExecuteDeleteAsync(cancellationToken);
                     }
     }
     

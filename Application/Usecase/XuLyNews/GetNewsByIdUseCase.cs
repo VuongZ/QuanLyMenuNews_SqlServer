@@ -1,6 +1,5 @@
 using Application.DTO;
 using Application.Requests.XuLyNews;
-using Domain.entity;
 using Domain.repositories;
 using FluentValidation;
 using FluentValidation.Results;

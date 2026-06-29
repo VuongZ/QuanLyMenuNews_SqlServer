@@ -15,13 +15,10 @@ public class DeleteMenuUseCase : IRequestHandler<DeleteMenuRequest,bool>
 
     public async Task<bool> Handle(DeleteMenuRequest request, CancellationToken cancellationToken)
     {
-          var menu = await menurepo.GetByIdAsync(request.Id);
+        var menu = await menurepo.GetByIdAsync(request.Id);
             if (menu == null) return false;
-
-          await menurepo.DeleteAsync(request.Id);
-         await uow.SaveChangesAsync(cancellationToken);
-
-          return true;
-          
+        await menurepo.DeleteAsync(request.Id);
+        await uow.SaveChangesAsync(cancellationToken);
+        return true;
     }
 }

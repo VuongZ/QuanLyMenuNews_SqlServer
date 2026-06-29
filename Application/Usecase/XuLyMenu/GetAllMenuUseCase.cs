@@ -1,11 +1,9 @@
 using MediatR;
-using Domain.entity;
 using Domain.repositories;
 using Application.Requests.XuLyMenu;
 using Application.DTO;
-using System.Runtime.CompilerServices;
 
-namespace Application.News.XuLyMenu.UseCases
+namespace Application.XuLyMenu.UseCases
 {
 
     public class GetAllMenuUseCase : IRequestHandler<GetAllMenuRequest, IEnumerable<MenuResponseDto>>

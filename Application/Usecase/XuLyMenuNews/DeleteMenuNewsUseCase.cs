@@ -8,13 +8,11 @@ namespace Application.Usecase.XuLyMenuNews
     {
         private readonly IMenuNewsRepo menuNewsRepo;
         private readonly IUnitOfWork uow;
-
         public DeleteMenuNewsUseCase(IMenuNewsRepo menuNewsRepo, IUnitOfWork uow)
         {
             this.menuNewsRepo = menuNewsRepo;
             this.uow = uow;
         }
-
         public async Task<bool> Handle(DeleteMenuNewsRequest request, CancellationToken cancellationToken)
         {
             var menuNews = menuNewsRepo.GetByIdAsync(request.MenuId, request.NewsId).FirstOrDefault();
@@ -22,10 +20,8 @@ namespace Application.Usecase.XuLyMenuNews
             {
                 return false;
             }
-
             await menuNewsRepo.DeleteAsync(request.MenuId, request.NewsId);
             await uow.SaveChangesAsync(cancellationToken);
-
             return true;
         }
     }

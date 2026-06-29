@@ -8,12 +8,10 @@ namespace Application.Usecase.XuLyMenuNews
     public class GetAllMenuNewsUseCase : IRequestHandler<GetAllMenuNewsRequest, IEnumerable<MenuNewsResponseDto>>
     {
         private readonly IMenuNewsRepo menuNewsRepo;
-
         public GetAllMenuNewsUseCase(IMenuNewsRepo menuNewsRepo)
         {
             this.menuNewsRepo = menuNewsRepo;
         }
-
         public Task<IEnumerable<MenuNewsResponseDto>> Handle(GetAllMenuNewsRequest request, CancellationToken cancellationToken)
         {
             var result = menuNewsRepo.GetAllAsync()
@@ -25,7 +23,6 @@ namespace Application.Usecase.XuLyMenuNews
                     NewsTitle = menuNews.News == null ? string.Empty : menuNews.News.Title ?? string.Empty
                 })
                 .AsEnumerable();
-
             return Task.FromResult(result);
         }
     }

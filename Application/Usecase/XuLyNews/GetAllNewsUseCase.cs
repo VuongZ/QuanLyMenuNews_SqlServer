@@ -1,7 +1,5 @@
-using System.Runtime.CompilerServices;
 using Application.DTO;
 using Application.XuLyNews.Requests;
-using Domain.entity;
 using Domain.repositories;
 using MediatR;
 

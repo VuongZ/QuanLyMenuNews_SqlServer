@@ -18,7 +18,6 @@ namespace Application.Requests.XuLyMenu
         public string? CountryKey { get; set; }
         public int? ProvinceId { get; set; }
         public int? WardId { get; set; } 
-
         public string? Address { get; set; }
     }
     

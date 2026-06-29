@@ -14,63 +14,35 @@ namespace Application.Usecase.XuLyMenuNews
         private readonly INewsRepo newsRepo;
         private readonly IUnitOfWork uow;
 
-        public CreateMenuNewsUseCase(
-            IMenuNewsRepo menuNewsRepo,
-            IMenuRepo menuRepo,
-            INewsRepo newsRepo,
-            IUnitOfWork uow)
+        public CreateMenuNewsUseCase(IMenuNewsRepo menuNewsRepo,IMenuRepo menuRepo,INewsRepo newsRepo,IUnitOfWork uow)
         {
             this.menuNewsRepo = menuNewsRepo;
             this.menuRepo = menuRepo;
             this.newsRepo = newsRepo;
             this.uow = uow;
         }
-
-     public async Task<bool> Handle(CreateMenuNewsRequest request, CancellationToken cancellationToken){
-    if (!await menuRepo.ExistsAsync(request.MenuId))
-    {
-        throw new ValidationException(new[]
+    public async Task<bool> Handle(CreateMenuNewsRequest request, CancellationToken cancellationToken){
+        if (!await menuRepo.ExistsAsync(request.MenuId))
         {
-            new ValidationFailure(
-                nameof(request.MenuId),
-                $"Không tìm thấy Menu có Id = {request.MenuId}."
-            )
-        });
-    }
-
-    if (!await newsRepo.ExistsAsync(request.NewsId))
-    {
-        throw new ValidationException(new[]
+            throw new ValidationException(new[]{new ValidationFailure(nameof(request.MenuId),$"Không tìm thấy Menu có Id = {request.MenuId}.") });
+        }
+        if (!await newsRepo.ExistsAsync(request.NewsId))
         {
-            new ValidationFailure(
-                nameof(request.NewsId),
-                $"Không tìm thấy News có Id = {request.NewsId}."
-            )
-        });
-    }
-
-    if (await menuNewsRepo.ExistsAsync(
-        request.MenuId,
-        request.NewsId))
-    {
-        throw new ValidationException(new[]
+            throw new ValidationException(new[]{ new ValidationFailure( nameof(request.NewsId),$"Không tìm thấy News có Id = {request.NewsId}." )});
+        }
+        if (await menuNewsRepo.ExistsAsync(
+            request.MenuId,
+            request.NewsId))
         {
-            new ValidationFailure(
-                "MenuNews",
-                "Quan hệ giữa Menu và News đã tồn tại."
-            )
+            throw new ValidationException(new[]{new ValidationFailure("MenuNews","Quan hệ giữa Menu và News đã tồn tại." )});
+        }
+        await menuNewsRepo.AddAsync(new MenuNews
+        {
+            MenuId = request.MenuId,
+            NewsId = request.NewsId
         });
-    }
-
-    await menuNewsRepo.AddAsync(new MenuNews
-    {
-        MenuId = request.MenuId,
-        NewsId = request.NewsId
-    });
-
-    await uow.SaveChangesAsync(cancellationToken);
-
-    return true;
-}
+        await uow.SaveChangesAsync(cancellationToken);
+        return true;
+        }
     }
 }

@@ -9,6 +9,10 @@ public interface IRepository<T> where T : BaseId
     Task UpdateAsync(T entity);
     Task DeleteAsync(int id);
     Task SoftDelete(int id);
-     Task<bool> ExistsAsync(int id);
-     Task<int> SoftDeleteManyAsync(IEnumerable<int> ids);
+    Task<bool> ExistsAsync(int id);
+    Task<int> SoftDeleteManyAsync(IEnumerable<int> ids);
+    Task<int> CountByIdsAsync(IEnumerable<int> ids);
+    Task<IEnumerable<T>> GetDaXoa();
+    Task<bool> RestoreAsync(int id);
+    Task<bool> ExistsDeletedAsync(int id);
 }

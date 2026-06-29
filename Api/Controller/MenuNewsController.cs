@@ -8,24 +8,24 @@ namespace Api.Controller;
 [Route("api/[controller]")]
 public class MenuNewsController : ControllerBase
 {
-    private readonly IMediator _mediator;
+    private readonly IMediator mediator;
 
     public MenuNewsController(IMediator mediator)
     {
-        _mediator = mediator;
+        this.mediator = mediator;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var result = await _mediator.Send(new GetAllMenuNewsRequest());
+        var result = await mediator.Send(new GetAllMenuNewsRequest());
         return Ok(result);
     }
 
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] int? menuId, [FromQuery] int? newsId)
     {
-        var result = await _mediator.Send(new SearchMenuNewsRequest
+        var result = await mediator.Send(new SearchMenuNewsRequest
         {
             MenuId = menuId,
             NewsId = newsId
@@ -36,7 +36,7 @@ public class MenuNewsController : ControllerBase
     [HttpGet("{menuId}/{newsId}")]
     public async Task<IActionResult> GetById(int menuId, int newsId)
     {
-        var result = await _mediator.Send(new GetMenuNewsByIdRequest
+        var result = await mediator.Send(new GetMenuNewsByIdRequest
         {
             MenuId = menuId,
             NewsId = newsId
@@ -53,7 +53,7 @@ public class MenuNewsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateMenuNewsRequest request)
     {
-        var result = await _mediator.Send(request);
+        var result = await mediator.Send(request);
         return Ok(result);
     }
 
@@ -63,7 +63,7 @@ public class MenuNewsController : ControllerBase
         request.OldMenuId = menuId;
         request.OldNewsId = newsId;
 
-        var result = await _mediator.Send(request);
+        var result = await mediator.Send(request);
         if (!result)
         {
             return NotFound();
@@ -75,7 +75,7 @@ public class MenuNewsController : ControllerBase
     [HttpDelete("{menuId}/{newsId}")]
     public async Task<IActionResult> Delete(int menuId, int newsId)
     {
-        var result = await _mediator.Send(new DeleteMenuNewsRequest
+        var result = await mediator.Send(new DeleteMenuNewsRequest
         {
             MenuId = menuId,
             NewsId = newsId

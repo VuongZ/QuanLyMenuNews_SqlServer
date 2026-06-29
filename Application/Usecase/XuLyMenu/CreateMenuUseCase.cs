@@ -49,10 +49,7 @@ namespace Application.XuLyMenu.UseCases
                         {
                             throw new ValidationException($"Slug news '{item.Slug}' đã tồn tại với tiêu đề khác.");
                         }
-                        menu.MenuNews.Add(new MenuNews
-                            {
-                                NewsId = news.Id
-                            });
+                        menu.MenuNews.Add(new MenuNews{NewsId = news.Id});
                             continue;
                     }
                     var wardId = await ResolveWardIdAsync(item.CountryKey,item.ProvinceId,item.WardId,item.Address,cancellationToken);
@@ -123,8 +120,7 @@ namespace Application.XuLyMenu.UseCases
             }
             if (!string.Equals(ward.KeyLocalization,normalizedCountryKey,StringComparison.OrdinalIgnoreCase))
             {
-                throw new ValidationException(new[]
-                { new ValidationFailure(nameof(wardId),$"Phường/xã Id = {wardId} không thuộc quốc gia '{countryKey}'.")});
+                throw new ValidationException(new[]{new ValidationFailure(nameof(wardId),$"Phường/xã Id = {wardId} không thuộc quốc gia '{countryKey}'.")});
             }
             return ward.WardId;
         }

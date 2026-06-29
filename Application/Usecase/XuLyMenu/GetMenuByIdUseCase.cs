@@ -1,12 +1,11 @@
 using Application.DTO;
 using Application.Requests.XuLyMenu;
-using Domain.entity;
 using Domain.repositories;
 using FluentValidation;
 using FluentValidation.Results;
 using MediatR;
 
-namespace Application.News.Usecase.XuLyMenu
+namespace Application.Usecase.XuLyMenu
 {
     public class GetMenuByIdUseCase : IRequestHandler<GetMenuByIdRequest, MenuResponseDto?>
     {

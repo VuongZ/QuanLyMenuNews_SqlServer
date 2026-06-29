@@ -1,5 +1,4 @@
 using AutoMapper;
-using Domain.entity;
 using Domain.repositories;
 using FluentValidation;
 using FluentValidation.Results;
@@ -56,7 +55,6 @@ public class UpdateNewsUseCase : IRequestHandler<UpdateNewsRequest, bool>
                 await menuRepo.UpdateAsync(menu);
                 requestedMenuIds.Add(item.Id.Value);
             }
-            await uow.SaveChangesAsync(cancellationToken);
             await uow.CommitAsync(cancellationToken);
             return true;
         }
